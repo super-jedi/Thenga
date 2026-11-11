@@ -582,7 +582,7 @@ async def handle_home(request: web.Request):
                     </div>
 
                     <div style="display: flex; gap: 10px;">
-                        <button class="btn btn-primary" style="flex: 1; padding: 12px;" onclick="submitLinkProfiles()">Save & Link Personas</button>
+                        <button id="btn-save-personas" class="btn btn-primary" style="flex: 1; padding: 12px;" onclick="submitLinkProfiles(this)">Save & Link Personas</button>
                         <button class="btn btn-secondary" onclick="closeModal('profileModal')">Later</button>
                     </div>
                 </div>
@@ -602,22 +602,46 @@ async def handle_home(request: web.Request):
                     document.getElementById(id).style.display = 'none';
                 }}
 
-                async function submitLinkProfiles() {{
-                    let libraId = document.getElementById('link-libra-id').value;
-                    let grandName = document.getElementById('link-grand-name').value;
-                    let grandRank = document.getElementById('link-grand-rank').value;
+                async function submitLinkProfiles(btn) {{
+                    let targetBtn = btn || document.getElementById('btn-save-personas');
+                    let oldText = targetBtn ? targetBtn.innerText : "Save & Link Personas";
+                    if (targetBtn) {{
+                        targetBtn.innerText = "⏳ Saving...";
+                        targetBtn.disabled = true;
+                    }}
 
-                    let res = await fetch('/api/user/link_profiles', {{
-                        method: 'POST',
-                        headers: {{'Content-Type': 'application/json'}},
-                        body: JSON.stringify({{ libra_member_id: libraId, grand_name: grandName, grand_rank: grandRank }})
-                    }});
-                    let d = await res.json();
-                    if (d.success) {{
-                        alert("In-game personas successfully linked!");
-                        location.reload();
-                    }} else {{
-                        alert("Error: " + d.error);
+                    try {{
+                        let libraEl = document.getElementById('link-libra-id');
+                        let grandEl = document.getElementById('link-grand-name');
+                        let rankEl = document.getElementById('link-grand-rank');
+                        
+                        let libraId = libraEl ? libraEl.value : '';
+                        let grandName = grandEl ? grandEl.value : '';
+                        let grandRank = rankEl ? rankEl.value : '';
+
+                        let res = await fetch('/api/user/link_profiles', {{
+                            method: 'POST',
+                            headers: {{'Content-Type': 'application/json'}},
+                            body: JSON.stringify({{ libra_member_id: libraId, grand_name: grandName, grand_rank: grandRank }})
+                        }});
+                        let d = await res.json();
+                        if (d.success) {{
+                            if (targetBtn) targetBtn.innerText = "✓ Linked!";
+                            alert("In-game personas successfully linked!");
+                            location.reload();
+                        }} else {{
+                            alert("Error: " + (d.error || "Failed to link personas"));
+                            if (targetBtn) {{
+                                targetBtn.innerText = oldText;
+                                targetBtn.disabled = false;
+                            }}
+                        }}
+                    }} catch (err) {{
+                        alert("Network or server error: " + err);
+                        if (targetBtn) {{
+                            targetBtn.innerText = oldText;
+                            targetBtn.disabled = false;
+                        }}
                     }}
                 }}
 
@@ -1686,7 +1710,7 @@ async def handle_libra(request: web.Request):
                     </div>
 
                     <div style="display: flex; gap: 10px;">
-                        <button class="btn btn-primary" style="flex: 1; padding: 12px;" onclick="submitLinkProfiles()">Save & Link Persona</button>
+                        <button id="btn-save-personas-libra" class="btn btn-primary" style="flex: 1; padding: 12px;" onclick="submitLinkProfiles(this)">Save & Link Personas</button>
                         <button class="btn btn-secondary" onclick="closeModal('profileModal')">Later</button>
                     </div>
                 </div>
@@ -1855,22 +1879,46 @@ async def handle_libra(request: web.Request):
                     }}
                 }}
 
-                async function submitLinkProfiles() {{
-                    let libraId = document.getElementById('link-libra-id').value;
-                    let grandName = document.getElementById('link-grand-name').value;
-                    let grandRank = document.getElementById('link-grand-rank').value;
+                async function submitLinkProfiles(btn) {{
+                    let targetBtn = btn || document.getElementById('btn-save-personas-libra');
+                    let oldText = targetBtn ? targetBtn.innerText : "Save & Link Personas";
+                    if (targetBtn) {{
+                        targetBtn.innerText = "⏳ Saving...";
+                        targetBtn.disabled = true;
+                    }}
 
-                    let res = await fetch('/api/user/link_profiles', {{
-                        method: 'POST',
-                        headers: {{'Content-Type': 'application/json'}},
-                        body: JSON.stringify({{ libra_member_id: libraId, grand_name: grandName, grand_rank: grandRank }})
-                    }});
-                    let d = await res.json();
-                    if (d.success) {{
-                        showToast("In-game personas linked!");
-                        setTimeout(() => location.reload(), 800);
-                    }} else {{
-                        alert("Error: " + d.error);
+                    try {{
+                        let libraEl = document.getElementById('link-libra-id');
+                        let grandEl = document.getElementById('link-grand-name');
+                        let rankEl = document.getElementById('link-grand-rank');
+
+                        let libraId = libraEl ? libraEl.value : '';
+                        let grandName = grandEl ? grandEl.value : '';
+                        let grandRank = rankEl ? rankEl.value : '';
+
+                        let res = await fetch('/api/user/link_profiles', {{
+                            method: 'POST',
+                            headers: {{'Content-Type': 'application/json'}},
+                            body: JSON.stringify({{ libra_member_id: libraId, grand_name: grandName, grand_rank: grandRank }})
+                        }});
+                        let d = await res.json();
+                        if (d.success) {{
+                            if (targetBtn) targetBtn.innerText = "✓ Linked!";
+                            showToast("In-game personas linked!");
+                            setTimeout(() => location.reload(), 600);
+                        }} else {{
+                            alert("Error: " + (d.error || "Failed to link personas"));
+                            if (targetBtn) {{
+                                targetBtn.innerText = oldText;
+                                targetBtn.disabled = false;
+                            }}
+                        }}
+                    }} catch (err) {{
+                        alert("Network or server error: " + err);
+                        if (targetBtn) {{
+                            targetBtn.innerText = oldText;
+                            targetBtn.disabled = false;
+                        }}
                     }}
                 }}
 
@@ -2165,16 +2213,21 @@ async def api_libra_link_profile(request: web.Request):
 
 async def api_user_link_profiles(request: web.Request):
     user = require_user(request)
-    data = await request.json()
-    libra_id = data.get("libra_member_id")
     try:
-        libra_id = int(libra_id) if libra_id and str(libra_id) != "0" else None
-    except ValueError:
-        libra_id = None
-    grand_name = str(data.get("grand_name", "")).strip() or user["username"]
-    grand_rank = str(data.get("grand_rank", "")).strip() or "Family Member (Rank 1)"
-    db.link_user_profiles(user["id"], user["username"], libra_id, grand_name, grand_rank)
-    return web.json_response({"success": True})
+        data = await request.json()
+        libra_id = data.get("libra_member_id")
+        try:
+            libra_id = int(libra_id) if libra_id and str(libra_id) != "0" else None
+        except ValueError:
+            libra_id = None
+        grand_name = str(data.get("grand_name", "")).strip() or user["username"]
+        grand_rank = str(data.get("grand_rank", "")).strip() or "Family Member (Rank 1)"
+        db.link_user_profiles(user["id"], user["username"], libra_id, grand_name, grand_rank)
+        return web.json_response({"success": True})
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return web.json_response({"success": False, "error": str(e)})
 
 async def handle_logo(request: web.Request):
     logo_path = os.path.join(os.path.dirname(__file__), "static", "logo.png")

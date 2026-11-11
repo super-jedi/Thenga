@@ -187,6 +187,13 @@ def init_db():
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """)
+    # Auto-migration for existing user_profiles tables
+    cursor.execute("PRAGMA table_info(user_profiles)")
+    cols = [c[1] for c in cursor.fetchall()]
+    if "libra_member_id" not in cols:
+        cursor.execute("ALTER TABLE user_profiles ADD COLUMN libra_member_id INTEGER")
+    if "grand_member_name" not in cols:
+        cursor.execute("ALTER TABLE user_profiles ADD COLUMN grand_member_name TEXT")
 
     # 6. Libra RP Ranks Hierarchy
     cursor.execute("""
@@ -224,6 +231,13 @@ def init_db():
         discord_username TEXT
     )
     """)
+    # Auto-migration for existing libra_members tables
+    cursor.execute("PRAGMA table_info(libra_members)")
+    l_cols = [c[1] for c in cursor.fetchall()]
+    if "discord_id" not in l_cols:
+        cursor.execute("ALTER TABLE libra_members ADD COLUMN discord_id TEXT")
+    if "discord_username" not in l_cols:
+        cursor.execute("ALTER TABLE libra_members ADD COLUMN discord_username TEXT")
     member_count = cursor.execute("SELECT COUNT(*) FROM libra_members").fetchone()[0]
     if member_count == 0:
         initial_members = [
