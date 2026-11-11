@@ -98,8 +98,8 @@ async def handle_login(request: web.Request):
     <meta charset="UTF-8">
     <title>OAuth Configuration Required</title>
     <style>
-        body { background: #07080c; color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        .box { background: #0e121d; border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 14px; padding: 32px; max-width: 480px; text-align: center; }
+        body { background: #0b0e14; color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .box { background: #111622; border: 1px solid #161d2b; border-radius: 14px; padding: 32px; max-width: 480px; text-align: center; }
         h2 { color: #f87171; margin-top: 0; font-size: 20px; }
         p { color: #94a3b8; font-size: 14px; line-height: 1.6; }
         code { background: #181d2d; padding: 4px 8px; border-radius: 6px; color: #38bdf8; font-size: 13px; font-family: monospace; }
@@ -176,7 +176,7 @@ async def handle_logout(request: web.Request):
         window.location.replace('/');
     </script>
 </head>
-<body style="background:#07080c; color:#94a3b8; font-family:sans-serif; display:flex; align-items:center; justify-content:center; height:100vh; margin:0;">
+<body style="background:#0b0e14; color:#94a3b8; font-family:sans-serif; display:flex; align-items:center; justify-content:center; height:100vh; margin:0;">
     <p>Signing out...</p>
 </body>
 </html>"""
@@ -189,15 +189,20 @@ async def handle_logout(request: web.Request):
 # ==========================================
 COMMON_CSS = """
 :root {
-    --bg-page: #07080c;
-    --bg-sidebar: #0b0e17;
-    --bg-card: #0e121d;
-    --bg-card-hover: #131724;
-    --bg-input: #090b12;
-    --border-subtle: #1a2030;
-    --border-highlight: #252f47;
+    /* Midnight Navy Slate Theme from Figma Redesign */
+    --bg-page: #0b0e14;
+    --bg-sidebar: #111622;
+    --bg-card: #111622;
+    --bg-card-hover: #141a29;
+    --bg-input: #0c0f17;
+    --bg-subtle: #131926;
+    --border-subtle: #161d2b;
+    --border-highlight: #222d42;
     --accent-emerald: #22c55e;
+    --accent-emerald-hover: #16a34a;
     --accent-emerald-glow: rgba(34, 197, 94, 0.25);
+    --accent-emerald-subtle: rgba(34, 197, 94, 0.12);
+    --accent-emerald-border: rgba(34, 197, 94, 0.35);
     --accent-crimson: #ef4444;
     --accent-crimson-hover: #dc2626;
     --accent-crimson-glow: rgba(239, 68, 68, 0.35);
@@ -209,13 +214,13 @@ COMMON_CSS = """
     --text-muted: #94a3b8;
     --text-dim: #64748b;
     
-    /* Legacy aliases */
-    --bg-dark: #07080c;
-    --card-bg: #0e121d;
-    --card-border: #1a2030;
-    --accent: #ef4444;
-    --accent-hover: #dc2626;
-    --accent-glow: rgba(239, 68, 68, 0.35);
+    /* Legacy aliases mapped to Figma palette */
+    --bg-dark: #0b0e14;
+    --card-bg: #111622;
+    --card-border: #161d2b;
+    --accent: #22c55e;
+    --accent-hover: #16a34a;
+    --accent-glow: rgba(34, 197, 94, 0.25);
     --gold: #f59e0b;
     --tender-green: #22c55e;
     --green-glow: rgba(34, 197, 94, 0.25);
@@ -306,9 +311,9 @@ body {
     color: #fff;
 }
 .nav-item.active {
-    background: rgba(34, 197, 94, 0.12);
-    color: #4ade80;
-    border: 1px solid rgba(34, 197, 94, 0.3);
+    background: var(--accent-emerald-subtle);
+    color: var(--accent-emerald);
+    border: 1px solid var(--accent-emerald);
     font-weight: 700;
 }
 .nav-icon {
@@ -326,7 +331,7 @@ body {
 }
 .top-header {
     height: 70px;
-    background: rgba(11, 14, 23, 0.85);
+    background: rgba(11, 14, 20, 0.85);
     backdrop-filter: blur(14px);
     border-bottom: 1px solid var(--border-subtle);
     display: flex;
@@ -544,14 +549,17 @@ body {
     border-bottom: none;
 }
 .act-icon {
-    width: 36px;
-    height: 36px;
+    width: 38px;
+    height: 38px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 15px;
     flex-shrink: 0;
+    background: var(--accent-emerald-subtle);
+    border: 1.5px solid var(--accent-emerald);
+    color: var(--accent-emerald);
 }
 .act-title {
     font-size: 14px;
@@ -586,17 +594,17 @@ body {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 12px;
+    padding: 12px 14px;
     border-radius: 10px;
-    background: #090a10;
-    border: 1px solid var(--border-subtle);
+    background: #131926;
+    border: 1px solid #1c2436;
     margin-top: 10px;
     cursor: pointer;
     transition: all 0.15s;
 }
 .persona-item:hover {
-    border-color: var(--border-highlight);
-    background: #0c0f18;
+    border-color: #2a364d;
+    background: #161d2c;
 }
 .persona-avatar {
     width: 32px;
@@ -636,13 +644,13 @@ body {
     letter-spacing: 0.3px;
 }
 .btn-primary { 
-    background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); 
+    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); 
     color: #fff; 
-    box-shadow: 0 4px 14px rgba(239, 68, 68, 0.35);
+    box-shadow: 0 4px 14px rgba(34, 197, 94, 0.25);
 }
 .btn-primary:hover { 
-    background: linear-gradient(135deg, #f87171 0%, #dc2626 100%); 
-    box-shadow: 0 0 20px var(--accent-crimson-glow); 
+    background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%); 
+    box-shadow: 0 0 20px var(--accent-emerald-glow); 
     transform: translateY(-1px);
 }
 .btn-green { 
@@ -656,8 +664,30 @@ body {
 }
 .btn-red { background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); color: white; }
 .btn-purple { background: linear-gradient(135deg, #a855f7 0%, #7e22ce 100%); color: white; }
-.btn-secondary { background: #1a202c; color: white; border: 1px solid var(--border-subtle); }
-.btn-secondary:hover { background: #242c3d; }
+.btn-secondary { background: #131926; color: #e2e8f0; border: 1px solid #232c3d; }
+.btn-secondary:hover { background: #182030; color: #fff; border-color: #334155; }
+.btn-profile-action {
+    width: 100%;
+    background: #111622;
+    border: 1px solid #232c3d;
+    color: #e2e8f0;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    text-decoration: none;
+}
+.btn-profile-action:hover {
+    background: #161d2b;
+    border-color: #334155;
+    color: #fff;
+}
 .btn-sm { padding: 6px 12px !important; font-size: 11px !important; }
 
 /* TABS */
@@ -1048,15 +1078,15 @@ th { color: var(--text-dim); font-size: 11px; text-transform: uppercase; letter-
     color: #fff;
 }
 .quick-stat-card {
-    background: #0b0d14;
-    border: 1px solid #1a1e2b;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
     border-radius: 12px;
     padding: 16px 20px;
     cursor: pointer;
     transition: all 0.2s;
 }
 .quick-stat-card:hover {
-    border-color: #ef4444;
+    border-color: var(--accent-emerald);
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(0,0,0,0.5);
 }
@@ -1087,9 +1117,9 @@ th { color: var(--text-dim); font-size: 11px; text-transform: uppercase; letter-
     border-color: var(--border-highlight);
 }
 .subtab-pill.active {
-    background: rgba(239,68,68,0.14);
-    color: #fff;
-    border-color: #ef4444;
+    background: var(--accent-emerald-subtle);
+    color: var(--accent-emerald);
+    border-color: var(--accent-emerald);
 }
 
 /* RESPONSIVE BREAKPOINTS */
@@ -1954,8 +1984,8 @@ async def handle_home(request: web.Request):
         {COMMON_CSS}
     </style>
 </head>
-<body style="justify-content: center; align-items: center; text-align: center; padding: 20px; background: radial-gradient(circle at 50% 20%, rgba(34, 197, 94, 0.12) 0%, rgba(7, 8, 12, 1) 75%); min-height: 100vh;">
-    <div class="card" style="max-width: 480px; width: 100%; padding: 42px 36px; border: 1.5px solid var(--border-subtle); box-shadow: 0 16px 60px rgba(0, 0, 0, 0.8), 0 0 45px rgba(34, 197, 94, 0.12); border-radius: 20px;">
+<body style="justify-content: center; align-items: center; text-align: center; padding: 20px; background: radial-gradient(circle at 50% 20%, rgba(34, 197, 94, 0.1) 0%, #0b0e14 75%); min-height: 100vh;">
+    <div class="card" style="max-width: 480px; width: 100%; padding: 42px 36px; background: #111622; border: 1px solid #161d2b; box-shadow: 0 16px 60px rgba(0, 0, 0, 0.8), 0 0 45px rgba(34, 197, 94, 0.12); border-radius: 20px;">
         <div style="margin-bottom: 22px;">
             <img src="/logo.png" alt="Thenga Network" style="max-width: 180px; width: 100%; height: auto; filter: drop-shadow(0 8px 30px rgba(34, 197, 94, 0.45));">
         </div>
@@ -1997,17 +2027,15 @@ async def handle_home(request: web.Request):
     for act in activities:
         cat = act.get("category", "info").lower()
         if cat == "treasury":
-            icon_badge = '<span class="act-icon" style="background:rgba(34,197,94,0.15); color:#22c55e; border:1px solid rgba(34,197,94,0.3);">💰</span>'
+            icon_badge = '<span class="act-icon" style="background:rgba(34,197,94,0.12); color:#22c55e; border:1.5px solid #22c55e;">💵</span>'
         elif cat == "fleet":
-            icon_badge = '<span class="act-icon" style="background:rgba(59,130,246,0.15); color:#60a5fa; border:1px solid rgba(59,130,246,0.3);">🚗</span>'
+            icon_badge = '<span class="act-icon" style="background:rgba(34,197,94,0.12); color:#22c55e; border:1.5px solid #22c55e;">🚗</span>'
         elif cat == "events":
-            icon_badge = '<span class="act-icon" style="background:rgba(168,85,247,0.15); color:#c084fc; border:1px solid rgba(168,85,247,0.3);">📅</span>'
-        elif cat == "warning":
-            icon_badge = '<span class="act-icon" style="background:rgba(239,68,68,0.15); color:#f87171; border:1px solid rgba(239,68,68,0.3);">⚠️</span>'
-        elif cat == "rank":
-            icon_badge = '<span class="act-icon" style="background:rgba(245,158,11,0.15); color:#fbbf24; border:1px solid rgba(245,158,11,0.3);">🎖️</span>'
+            icon_badge = '<span class="act-icon" style="background:rgba(34,197,94,0.12); color:#22c55e; border:1.5px solid #22c55e;">📅</span>'
+        elif cat in ["persona", "account"]:
+            icon_badge = '<span class="act-icon" style="background:rgba(34,197,94,0.12); color:#22c55e; border:1.5px solid #22c55e;">👤</span>'
         else:
-            icon_badge = '<span class="act-icon" style="background:rgba(148,163,184,0.15); color:#94a3b8; border:1px solid rgba(148,163,184,0.3);">👤</span>'
+            icon_badge = '<span class="act-icon" style="background:rgba(34,197,94,0.12); color:#22c55e; border:1.5px solid #22c55e;">●</span>'
 
         created_str = str(act.get("created_at") or "Just now")
         activity_items_html += f"""
@@ -2030,32 +2058,31 @@ async def handle_home(request: web.Request):
             <div>
                 <div class="server-card-header">
                     <div class="server-title">
-                        <span style="font-size:22px;">🌆</span>
-                        Grand RP • EN2
+                        <div style="width:34px; height:34px; border-radius:8px; background:rgba(34,197,94,0.12); border:1px solid rgba(34,197,94,0.35); display:flex; align-items:center; justify-content:center; color:#22c55e; font-size:16px;">🏢</div>
+                        <span>Grand RP • EN2</span>
                     </div>
-                    <span class="badge badge-green">● Online</span>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <span class="badge badge-green">● Online</span>
+                        <span style="color:#64748b; font-size:16px;">&gt;</span>
+                    </div>
                 </div>
                 <div class="metrics-row">
                     <div class="metric-box">
                         <div class="metric-label">Treasury</div>
                         <div class="metric-val">{format_money(grand_bal['balance'])}</div>
-                        <div class="metric-trend">+2.8% (7d)</div>
+                        <div class="metric-trend">↑ +2.8% (7d)</div>
                     </div>
                     <div class="metric-box">
                         <div class="metric-label">Fleet</div>
-                        <div class="metric-val">{len(grand_v)} Cars</div>
-                        <div class="metric-trend">+3 (7d)</div>
+                        <div class="metric-val">{len(grand_v)}</div>
+                        <div class="metric-trend">↑ +3 (7d)</div>
                     </div>
                     <div class="metric-box">
-                        <div class="metric-label">Plantation</div>
-                        <div class="metric-val" style="color:#34d399; font-size:15px;">Pineapple</div>
-                        <div class="metric-trend" style="color:var(--text-dim);">Cycle #14</div>
+                        <div class="metric-label">Events</div>
+                        <div class="metric-val">6</div>
+                        <div class="metric-trend" style="color:var(--text-dim);">2 upcoming</div>
                     </div>
                 </div>
-            </div>
-            <div style="margin-top:16px; padding-top:12px; border-top:1px solid var(--border-subtle); display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-size:12px; color:var(--text-muted); font-weight:700;">Open Command Center</span>
-                <span style="color:#60a5fa; font-weight:800; font-size:14px;">→</span>
             </div>
         </a>
 
@@ -2064,32 +2091,31 @@ async def handle_home(request: web.Request):
             <div>
                 <div class="server-card-header">
                     <div class="server-title">
-                        <span style="font-size:22px;">⚖️</span>
-                        Libra RP • Fedrix
+                        <div style="width:34px; height:34px; border-radius:8px; background:rgba(34,197,94,0.12); border:1px solid rgba(34,197,94,0.35); display:flex; align-items:center; justify-content:center; color:#22c55e; font-size:16px;">⚖️</div>
+                        <span>Libra RP • Fedrix</span>
                     </div>
-                    <span class="badge badge-green">● Online</span>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <span class="badge badge-green">● Online</span>
+                        <span style="color:#64748b; font-size:16px;">&gt;</span>
+                    </div>
                 </div>
                 <div class="metrics-row">
                     <div class="metric-box">
                         <div class="metric-label">Treasury</div>
                         <div class="metric-val">{format_money(libra_bal['balance'])}</div>
-                        <div class="metric-trend">+1.4% (7d)</div>
+                        <div class="metric-trend">↑ +1.4% (7d)</div>
                     </div>
                     <div class="metric-box">
                         <div class="metric-label">Fleet</div>
-                        <div class="metric-val">{len(libra_v)} Cars</div>
-                        <div class="metric-trend">+1 (7d)</div>
+                        <div class="metric-val">{len(libra_v)}</div>
+                        <div class="metric-trend">↑ +1 (7d)</div>
                     </div>
                     <div class="metric-box">
                         <div class="metric-label">Events</div>
-                        <div class="metric-val" style="color:#c084fc; font-size:15px;">3 Scheduled</div>
-                        <div class="metric-trend" style="color:var(--text-dim);">28 Members</div>
+                        <div class="metric-val">4</div>
+                        <div class="metric-trend" style="color:var(--text-dim);">1 upcoming</div>
                     </div>
                 </div>
-            </div>
-            <div style="margin-top:16px; padding-top:12px; border-top:1px solid var(--border-subtle); display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-size:12px; color:var(--text-muted); font-weight:700;">Open Command Center</span>
-                <span style="color:#c084fc; font-weight:800; font-size:14px;">→</span>
             </div>
         </a>
     </div>
@@ -2115,16 +2141,16 @@ async def handle_home(request: web.Request):
     <div class="profile-card">
         <div style="font-size:11px; font-weight:800; color:var(--text-dim); text-transform:uppercase; margin-bottom:12px;">Profile</div>
         <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
-            <img src="{user['avatar_url']}" style="width:48px; height:48px; border-radius:50%; border:2px solid var(--accent-emerald); object-fit:cover;" onerror="this.src='/logo.png'">
+            <img src="{user['avatar_url']}" style="width:44px; height:44px; border-radius:50%; background:#1a2232; object-fit:cover;" onerror="this.src='/logo.png'">
             <div>
                 <div style="font-weight:900; font-size:15px; color:#fff;">{user['username']}</div>
                 <div style="font-size:12px; color:var(--text-muted);">Network Administrator</div>
                 <div style="margin-top:4px;">
-                    <span class="badge {'badge-red' if is_adm else 'badge-green'}" style="font-size:10px;">{'Admin' if is_adm else 'Operative'}</span>
+                    <span class="badge badge-green" style="font-size:10px;">{'Admin' if is_adm else 'Operative'}</span>
                 </div>
             </div>
         </div>
-        <button class="btn btn-secondary btn-sm" style="width:100%;" onclick="openPersonasModal()">
+        <button class="btn-profile-action" onclick="openPersonasModal()">
             ✏️ Edit profile
         </button>
     </div>
@@ -2132,30 +2158,30 @@ async def handle_home(request: web.Request):
     <!-- Linked Accounts Card -->
     <div class="profile-card">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-            <span style="font-size:11px; font-weight:800; color:var(--text-dim); text-transform:uppercase;">Linked Accounts</span>
+            <span style="font-size:11px; font-weight:800; color:var(--text-dim); text-transform:uppercase;">Linked accounts</span>
             <span style="font-size:11px; color:var(--text-muted); font-weight:700;">2 Connected</span>
         </div>
 
         <div class="persona-item" onclick="openAccountsModal()">
-            <div class="persona-avatar">🌆</div>
+            <div class="persona-avatar" style="border-radius:50%;">👤</div>
             <div style="flex:1;">
                 <div style="font-weight:700; font-size:13px; color:#fff;">{grand_name}</div>
                 <div style="font-size:11px; color:var(--text-dim);">Grand RP • EN2</div>
             </div>
-            <span style="color:var(--text-dim); font-size:13px; margin-left:auto;">&gt;</span>
+            <span style="color:var(--text-dim); font-size:14px; margin-left:auto;">&gt;</span>
         </div>
 
         <div class="persona-item" onclick="openAccountsModal()">
-            <div class="persona-avatar">⚖️</div>
+            <div class="persona-avatar" style="border-radius:50%;">👤</div>
             <div style="flex:1;">
                 <div style="font-weight:700; font-size:13px; color:#fff;">{libra_name}</div>
                 <div style="font-size:11px; color:var(--text-dim);">Libra RP • Fedrix</div>
             </div>
-            <span style="color:var(--text-dim); font-size:13px; margin-left:auto;">&gt;</span>
+            <span style="color:var(--text-dim); font-size:14px; margin-left:auto;">&gt;</span>
         </div>
 
-        <button class="btn btn-secondary btn-sm" style="width:100%; margin-top:12px; border-style:dashed;" onclick="openAccountsModal()">
-            + Link Account
+        <button class="btn-profile-action" style="margin-top:12px;" onclick="openAccountsModal()">
+            + Link account
         </button>
     </div>
 
