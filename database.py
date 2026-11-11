@@ -222,7 +222,8 @@ def init_db():
         ("discord_rank", "TEXT DEFAULT '👑 High Command Staff'"),
         ("discord_recent_activity", "TEXT DEFAULT 'Authenticated via OAuth2 • Command Center Active'"),
         ("discord_awards", "TEXT DEFAULT ''"),
-        ("discord_punishments", "TEXT DEFAULT 'Clean Record (0 Mutes / Warnings)'")
+        ("discord_punishments", "TEXT DEFAULT 'Clean Record (0 Mutes / Warnings)'"),
+        ("primary_persona", "TEXT DEFAULT 'grandrp'")
     ]
     for c_name, c_def in dossier_cols:
         if c_name not in cols:
@@ -335,6 +336,51 @@ def init_db():
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """, initial_members)
 
+    # 9. App Settings (Persistent Server Configuration & Secret Keys)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS app_settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+
+    # 10. Persistent User Sessions
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS user_sessions (
+        session_token TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        username TEXT NOT NULL,
+        avatar_url TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        expires_at TIMESTAMP NOT NULL
+    )
+    """)
+
+    # 11. Network Live Activities (Operations Hub Feed)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS network_activities (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        server TEXT NOT NULL,
+        category TEXT NOT NULL,
+        title TEXT NOT NULL,
+        description TEXT NOT NULL,
+        actor TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+    act_count = cursor.execute("SELECT COUNT(*) FROM network_activities").fetchone()[0]
+    if act_count == 0:
+        cursor.executemany("""
+        INSERT INTO network_activities (server, category, title, description, actor, created_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """, [
+            ('grandrp', 'treasury', 'Treasury updated', 'Grand RP • EN2 — +$120,000 (property sale)', 'superjedi', datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
+            ('librarp', 'fleet', 'Fleet change', 'Libra RP • Fedrix — +1 vehicle (Patrol)', 'superjedi', datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
+            ('grandrp', 'events', 'Event published', 'Grand RP • EN2 — Community Meet (Feb 2)', 'superjedi', datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
+            ('librarp', 'persona', 'Persona linked', 'Superjedi Tnga → Libra RP • Fedrix', 'superjedi', datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+        ])
+
     conn.commit()
     conn.close()
 
@@ -382,6 +428,16 @@ def record_bank_transaction(server: str, user_id: int, user_name: str, tx_type: 
     conn.commit()
     conn.close()
 
+    srv_name = "Grand RP • EN2" if "grand" in server.lower() else "Libra RP • Fedrix"
+    sign = "+" if tx_type == "deposit" else "-"
+    log_activity(
+        server=server,
+        category="treasury",
+        title="Treasury updated",
+        description=f"{srv_name} — {sign}${net:,.0f} ({reason or 'Operations'})",
+        actor=user_name
+    )
+
 def get_recent_transactions(server: str, limit: int = 50) -> List[Dict[str, Any]]:
     conn = get_connection()
     rows = conn.execute("""
@@ -402,6 +458,15 @@ def add_vehicle(server: str, name: str, plate: Optional[str], expiry_dt: Optiona
     """, (server.lower(), name, clean_plate, expiry_str, notes, added_by, image_url))
     conn.commit()
     conn.close()
+
+    srv_name = "Grand RP • EN2" if "grand" in server.lower() else "Libra RP • Fedrix"
+    log_activity(
+        server=server,
+        category="fleet",
+        title="Fleet change",
+        description=f"{srv_name} — +1 vehicle ({name})",
+        actor=added_by
+    )
 
 def get_vehicles(server: Optional[str] = None) -> List[Dict[str, Any]]:
     conn = get_connection()
@@ -801,6 +866,115 @@ def clear_libra_warnings(member_id: int) -> bool:
     conn.commit()
     conn.close()
     return True
+
+# ==================== APP SETTINGS & SESSION SECRET ====================
+
+def get_app_setting(key: str, default: Optional[str] = None) -> Optional[str]:
+    conn = get_connection()
+    row = conn.execute("SELECT value FROM app_settings WHERE key = ?", (key,)).fetchone()
+    conn.close()
+    return row['value'] if row else default
+
+def set_app_setting(key: str, value: str):
+    conn = get_connection()
+    conn.execute("""
+    INSERT INTO app_settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)
+    ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP
+    """, (key, str(value)))
+    conn.commit()
+    conn.close()
+
+def get_or_create_session_secret() -> str:
+    # 1. Environment variable if explicitly set
+    env_sec = os.getenv("SESSION_SECRET")
+    if env_sec and len(env_sec.strip()) >= 16:
+        return env_sec.strip()
+
+    # 2. Database persistent setting
+    existing = get_app_setting("session_secret")
+    if existing and len(existing) >= 16:
+        return existing
+
+    # 3. Generate a permanent cryptographically strong key and persist in database
+    import secrets
+    new_secret = secrets.token_hex(32)
+    set_app_setting("session_secret", new_secret)
+    return new_secret
+
+# ==================== USER SESSIONS ====================
+
+def save_user_session(token: str, user_id: str, username: str, avatar_url: Optional[str] = None, days: int = 90):
+    from datetime import datetime, timedelta
+    expires = (datetime.utcnow() + timedelta(days=days)).strftime("%Y-%m-%d %H:%M:%S")
+    conn = get_connection()
+    conn.execute("""
+    INSERT INTO user_sessions (session_token, user_id, username, avatar_url, expires_at)
+    VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(session_token) DO UPDATE SET
+        user_id = excluded.user_id,
+        username = excluded.username,
+        avatar_url = excluded.avatar_url,
+        expires_at = excluded.expires_at
+    """, (token, str(user_id), username, avatar_url or "", expires))
+    conn.commit()
+    conn.close()
+
+def get_user_session(token: str) -> Optional[Dict[str, Any]]:
+    conn = get_connection()
+    row = conn.execute("""
+    SELECT user_id, username, avatar_url, expires_at
+    FROM user_sessions
+    WHERE session_token = ? AND expires_at > datetime('now')
+    """, (token,)).fetchone()
+    conn.close()
+    if row:
+        return {
+            "id": row['user_id'],
+            "username": row['username'],
+            "avatar_url": row['avatar_url']
+        }
+    return None
+
+def delete_user_session(token: str):
+    conn = get_connection()
+    conn.execute("DELETE FROM user_sessions WHERE session_token = ?", (token,))
+    conn.commit()
+    conn.close()
+
+def set_primary_persona(user_id: str, server: str) -> bool:
+    clean_server = 'librarp' if 'libra' in server.lower() else 'grandrp'
+    conn = get_connection()
+    conn.execute("UPDATE user_profiles SET primary_persona = ? WHERE user_id = ?", (clean_server, str(user_id)))
+    conn.commit()
+    conn.close()
+    return True
+
+# ==================== ACTIVITIES SYSTEM ====================
+
+def log_activity(server: str, category: str, title: str, description: str, actor: Optional[str] = None):
+    try:
+        conn = get_connection()
+        conn.execute("""
+        INSERT INTO network_activities (server, category, title, description, actor)
+        VALUES (?, ?, ?, ?, ?)
+        """, (server.lower(), category.lower(), title.strip(), description.strip(), actor or 'System'))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Error logging activity: {e}")
+
+def get_recent_activities(limit: int = 10, server: Optional[str] = None) -> List[Dict[str, Any]]:
+    conn = get_connection()
+    if server:
+        rows = conn.execute("""
+        SELECT * FROM network_activities WHERE server = ? ORDER BY id DESC LIMIT ?
+        """, (server.lower(), limit)).fetchall()
+    else:
+        rows = conn.execute("""
+        SELECT * FROM network_activities ORDER BY id DESC LIMIT ?
+        """, (limit,)).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
 
 # Initialize database tables on load
 init_db()

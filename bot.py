@@ -27,6 +27,7 @@ COGS = [
     "cogs.grand",
     "cogs.libra",
     "cogs.moderation",
+    "cogs.music",
     "cogs.voice_notes"
 ]
 
