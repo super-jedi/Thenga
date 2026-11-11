@@ -1,14 +1,15 @@
 import os
 import asyncio
+from dotenv import load_dotenv
+
+load_dotenv()
+
 from aiohttp import web
 import discord
 from discord.ext import commands
-from dotenv import load_dotenv
 
 import database as db
 from web_server import create_web_app
-
-load_dotenv()
 
 TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 PORT = int(os.environ.get("PORT", 8080))

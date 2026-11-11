@@ -7,14 +7,19 @@ import aiohttp
 from aiohttp import web
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any
+from dotenv import load_dotenv
 
 import database as db
 from utils import format_money, parse_amount
 
+load_dotenv()
+
 CLIENT_ID = os.getenv("DISCORD_CLIENT_ID", "1567865230829035530")
-CLIENT_SECRET = os.getenv("DISCORD_CLIENT_SECRET", "")
-SECRET_KEY = os.getenv("SESSION_SECRET") or os.urandom(32).hex()
 ENABLE_DEV_LOGIN = os.getenv("ENABLE_DEV_LOGIN", "false").lower() == "true"
+SECRET_KEY = os.getenv("SESSION_SECRET") or os.urandom(32).hex()
+
+def get_client_secret() -> str:
+    return os.getenv("DISCORD_CLIENT_SECRET", "").strip()
 
 def create_session_token(user_data: dict) -> str:
     raw = json.dumps(user_data).encode("utf-8")
@@ -43,7 +48,8 @@ def get_current_user(request: web.Request) -> Optional[dict]:
 # ==========================================
 async def handle_login(request: web.Request):
     redirect_uri = f"{request.scheme}://{request.host}/auth/callback"
-    if CLIENT_SECRET:
+    client_secret = get_client_secret()
+    if client_secret:
         discord_url = (
             f"https://discord.com/api/oauth2/authorize?client_id={CLIENT_ID}"
             f"&redirect_uri={redirect_uri}&response_type=code&scope=identify"
@@ -79,10 +85,11 @@ async def handle_callback(request: web.Request):
     if not code:
         return web.HTTPFound("/")
 
+    client_secret = get_client_secret()
     redirect_uri = f"{request.scheme}://{request.host}/auth/callback"
     data = {
         "client_id": CLIENT_ID,
-        "client_secret": CLIENT_SECRET,
+        "client_secret": client_secret,
         "grant_type": "authorization_code",
         "code": code,
         "redirect_uri": redirect_uri
