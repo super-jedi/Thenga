@@ -6,6 +6,8 @@ import yt_dlp
 import functools
 import os
 import time
+import shutil
+import shlex
 from typing import Optional, Dict, Any, List
 from collections import deque
 
@@ -109,16 +111,43 @@ class GuildPlayer:
                     self.queue.append(self.current)
                 self.current = track
 
+            filepath = None
             try:
-                # Local audio caching for 100% reliable VC playback without CDN throttling/silence
-                temp_dir = os.path.join(os.getcwd(), "temp_music")
-                os.makedirs(temp_dir, exist_ok=True)
+                stream_url = track.stream_url
+                headers = getattr(track, 'headers', {})
 
-                track_id = track.id or str(abs(hash(track.title)))
-                existing = [os.path.join(temp_dir, f) for f in os.listdir(temp_dir) if f.startswith(f"{track_id}.")]
-                filepath = existing[0] if (existing and os.path.exists(existing[0])) else None
+                # Refresh stream URL if missing
+                if not stream_url:
+                    data = await loop.run_in_executor(
+                        None,
+                        functools.partial(ytdl.extract_info, track.webpage_url, download=False)
+                    )
+                    stream_url = data.get('url')
+                    if not stream_url and 'formats' in data:
+                        audio_formats = [f for f in data['formats'] if f.get('acodec') != 'none']
+                        if audio_formats:
+                            stream_url = audio_formats[-1].get('url')
+                        elif data['formats']:
+                            stream_url = data['formats'][-1].get('url')
+                    headers = data.get('http_headers', {})
 
-                if not filepath:
+                ffmpeg_exe = shutil.which('ffmpeg') or 'ffmpeg'
+
+                if stream_url:
+                    # Fix: Use shlex.quote() instead of repr() so shlex.split() in discord.py
+                    # preserves real CRLF (\r\n) byte endings without mangling HTTP headers
+                    header_str = ''.join(f"{k}: {v}\r\n" for k, v in headers.items()) if headers else ""
+                    before_opts = '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5'
+                    if header_str:
+                        before_opts += f' -headers {shlex.quote(header_str)}'
+
+                    print(f"[Music] Playing stream '{track.title}' in guild {self.guild_id} (volume: {self.volume})")
+                    source = discord.FFmpegPCMAudio(stream_url, executable=ffmpeg_exe, before_options=before_opts, options='-vn')
+                else:
+                    # Fallback to local audio caching if no direct stream URL
+                    temp_dir = os.path.join(os.getcwd(), "temp_music")
+                    os.makedirs(temp_dir, exist_ok=True)
+                    track_id = track.id or str(abs(hash(track.title)))
                     outtmpl = os.path.join(temp_dir, f"{track_id}.%(ext)s")
                     dl_opts = {
                         'format': 'bestaudio/best',
@@ -131,36 +160,15 @@ class GuildPlayer:
                     }
                     def _download():
                         with yt_dlp.YoutubeDL(dl_opts) as ydl:
-                            target_url = track.webpage_url or f"https://www.youtube.com/watch?v={track_id}"
-                            inf = ydl.extract_info(target_url, download=True)
+                            inf = ydl.extract_info(track.webpage_url, download=True)
                             if 'entries' in inf:
                                 inf = inf['entries'][0]
                             return ydl.prepare_filename(inf)
 
-                    try:
-                        dl_path = await loop.run_in_executor(None, _download)
-                        if os.path.exists(dl_path):
-                            filepath = dl_path
-                        else:
-                            matches = [os.path.join(temp_dir, f) for f in os.listdir(temp_dir) if f.startswith(f"{track_id}.")]
-                            if matches:
-                                filepath = matches[0]
-                    except Exception as dl_err:
-                        print(f"[Music] Local download fallback error for '{track.title}': {dl_err}")
-
-                track.local_filepath = filepath
-
-                if filepath and os.path.exists(filepath):
-                    print(f"[Music] Playing cached '{track.title}' ({os.path.getsize(filepath)} bytes) in guild {self.guild_id} (volume: {self.volume})")
-                    source = discord.FFmpegPCMAudio(filepath, options='-vn')
-                elif track.stream_url:
-                    print(f"[Music] Playing stream '{track.title}' in guild {self.guild_id} (volume: {self.volume})")
-                    before_opts = '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5'
-                    source = discord.FFmpegPCMAudio(track.stream_url, before_options=before_opts, options='-vn')
-                else:
-                    print(f"[Music] No playable audio source found for '{track.title}'")
-                    self.next_event.set()
-                    continue
+                    filepath = await loop.run_in_executor(None, _download)
+                    track.local_filepath = filepath
+                    print(f"[Music] Playing cached '{track.title}' ({os.path.getsize(filepath)} bytes) in guild {self.guild_id}")
+                    source = discord.FFmpegPCMAudio(filepath, executable=ffmpeg_exe, options='-vn')
 
                 transformed_source = discord.PCMVolumeTransformer(source, volume=self.volume)
 
