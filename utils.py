@@ -1,7 +1,33 @@
 import re
+import os
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Any
 import discord
+
+ADMIN_USERS = [u.strip().lower() for u in os.getenv("ADMIN_USERS", "superjedi,haris_supran,harisupran").split(",") if u.strip()]
+ADMIN_IDS = [i.strip() for i in os.getenv("ADMIN_IDS", "1567865230829035530").split(",") if i.strip()]
+
+def is_admin_user(user: Any) -> bool:
+    """
+    Checks if a Discord user, member, or web session dict has admin/founder status.
+    """
+    if not user:
+        return False
+    
+    if isinstance(user, dict):
+        uname = str(user.get("username", "")).lower()
+        uid = str(user.get("id", ""))
+        return uname in ADMIN_USERS or uid in ADMIN_IDS
+    
+    uname = getattr(user, "name", "") or getattr(user, "display_name", "")
+    uid = str(getattr(user, "id", ""))
+    if uname.lower() in ADMIN_USERS or uid in ADMIN_IDS:
+        return True
+    
+    perms = getattr(user, "guild_permissions", None)
+    if perms and perms.administrator:
+        return True
+    return False
 
 def parse_amount(text: str) -> float:
     """

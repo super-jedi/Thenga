@@ -10,7 +10,7 @@ from typing import Optional, Dict, Any
 from dotenv import load_dotenv
 
 import database as db
-from utils import format_money, parse_amount
+from utils import format_money, parse_amount, is_admin_user
 
 load_dotenv()
 
@@ -132,13 +132,16 @@ async def handle_logout(request: web.Request):
 # ==========================================
 COMMON_CSS = """
 :root {
-    --bg-dark: #090d16;
-    --card-bg: #131b2e;
-    --card-border: #1e293b;
-    --accent: #38bdf8;
-    --accent-glow: rgba(56, 189, 248, 0.25);
-    --gold: #f59e0b;
-    --green: #10b981;
+    --bg-dark: #080c14;
+    --card-bg: #111724;
+    --card-border: #1d283c;
+    --accent: #f59e0b; /* Warm Coconut Amber */
+    --accent-light: #fbbf24;
+    --accent-hover: #d97706;
+    --accent-glow: rgba(245, 158, 11, 0.35);
+    --gold: #fbbf24;
+    --green: #10b981; /* Lush Kerala Emerald */
+    --green-glow: rgba(16, 185, 129, 0.25);
     --red: #ef4444;
     --purple: #a855f7;
     --text-primary: #f8fafc;
@@ -154,32 +157,44 @@ body {
     flex-direction: column;
 }
 header {
-    background: #0f172a;
+    background: #0d121d;
     border-bottom: 1px solid var(--card-border);
     padding: 16px 32px;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
 }
 .brand {
-    font-size: 20px;
+    font-size: 19px;
     font-weight: 800;
-    color: var(--accent);
+    color: var(--gold);
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
     text-decoration: none;
+    letter-spacing: -0.5px;
+}
+.brand-badge {
+    font-size: 11px;
+    font-weight: 700;
+    color: #fbbf24;
+    background: rgba(245, 158, 11, 0.15);
+    border: 1px solid rgba(245, 158, 11, 0.4);
+    padding: 2px 8px;
+    border-radius: 9999px;
+    letter-spacing: 0.5px;
 }
 .user-pill {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
     background: var(--card-bg);
     border: 1px solid var(--card-border);
     padding: 6px 14px;
     border-radius: 9999px;
 }
-.user-avatar { width: 32px; height: 32px; border-radius: 50%; }
+.user-avatar { width: 32px; height: 32px; border-radius: 50%; border: 1.5px solid var(--accent); }
 .logout-btn { color: var(--red); text-decoration: none; font-size: 13px; font-weight: 600; margin-left: 8px; }
 .btn {
     display: inline-flex;
@@ -187,7 +202,7 @@ header {
     justify-content: center;
     gap: 8px;
     padding: 10px 20px;
-    font-weight: 600;
+    font-weight: 700;
     font-size: 14px;
     border-radius: 8px;
     cursor: pointer;
@@ -195,13 +210,20 @@ header {
     text-decoration: none;
     transition: all 0.2s;
 }
-.btn-primary { background: var(--accent); color: #0f172a; }
-.btn-primary:hover { background: #7dd3fc; box-shadow: 0 0 15px var(--accent-glow); }
-.btn-green { background: var(--green); color: white; }
-.btn-red { background: var(--red); color: white; }
-.btn-purple { background: var(--purple); color: white; }
-.btn-secondary { background: #334155; color: white; }
-.btn-secondary:hover { background: #475569; }
+.btn-primary { 
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); 
+    color: #080c14; 
+}
+.btn-primary:hover { 
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); 
+    box-shadow: 0 0 18px var(--accent-glow); 
+}
+.btn-green { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; }
+.btn-green:hover { box-shadow: 0 0 15px var(--green-glow); }
+.btn-red { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; }
+.btn-purple { background: linear-gradient(135deg, #a855f7 0%, #9333ea 100%); color: white; }
+.btn-secondary { background: #1f293d; color: white; border: 1px solid #334155; }
+.btn-secondary:hover { background: #334155; }
 .tabs {
     display: flex;
     gap: 12px;
@@ -213,43 +235,77 @@ header {
     background: transparent;
     border: none;
     color: var(--text-secondary);
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 700;
     padding: 8px 16px;
-    border-radius: 6px;
+    border-radius: 8px;
     cursor: pointer;
+    transition: all 0.2s;
 }
-.tab-btn.active { background: #1e293b; color: var(--accent); }
+.tab-btn.active { 
+    background: rgba(245, 158, 11, 0.15); 
+    color: var(--gold); 
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
 .card {
     background: var(--card-bg);
     border: 1px solid var(--card-border);
-    border-radius: 12px;
+    border-radius: 14px;
     padding: 24px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
 }
 .stat-val { font-size: 26px; font-weight: 800; color: #fff; margin-top: 4px; }
-.stat-label { font-size: 13px; color: var(--text-secondary); text-transform: uppercase; font-weight: 700; }
+.stat-label { font-size: 12px; color: var(--text-secondary); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; }
 input, select {
     width: 100%;
-    background: #0b1120;
-    border: 1px solid #334155;
+    background: #090d16;
+    border: 1px solid #243048;
     color: #fff;
     padding: 12px;
     border-radius: 8px;
     font-size: 14px;
     margin-top: 6px;
     margin-bottom: 16px;
+    transition: border-color 0.2s, box-shadow 0.2s;
 }
-input:focus, select:focus { outline: none; border-color: var(--accent); }
+input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 10px var(--accent-glow); }
 table { width: 100%; border-collapse: collapse; margin-top: 12px; }
 th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--card-border); font-size: 14px; }
-th { color: var(--text-secondary); font-size: 12px; text-transform: uppercase; }
+th { color: var(--text-secondary); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
 .badge { display: inline-block; padding: 4px 10px; border-radius: 9999px; font-size: 12px; font-weight: 700; }
 .badge-red { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid #ef4444; }
 .badge-green { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid #10b981; }
 .badge-purple { background: rgba(168, 85, 247, 0.2); color: #c084fc; border: 1px solid #a855f7; }
 """
+
+def render_header(user: dict, subtitle: str = "") -> str:
+    is_adm = is_admin_user(user)
+    badge_html = (
+        '<span class="badge" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid #f59e0b; font-size: 11px; margin-left: 6px;">👑 FOUNDER / ADMIN</span>'
+        if is_adm else
+        '<span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid #10b981; font-size: 11px; margin-left: 6px;">MEMBER</span>'
+    )
+    sub_tag = (
+        f'<span style="font-size:14px; color:#94a3b8; font-weight:500;">/ {subtitle}</span>'
+        if subtitle else
+        '<span class="brand-badge">MALAYALI CLUB</span>'
+    )
+    return f"""
+    <header>
+        <a href="/" class="brand">
+            <div style="width:36px; height:36px; border-radius:50%; background:radial-gradient(circle, rgba(245,158,11,0.25), rgba(18,24,36,0.9)); border:1.5px solid rgba(245,158,11,0.5); display:flex; align-items:center; justify-content:center; font-size:20px; box-shadow: 0 0 12px rgba(245,158,11,0.2);">🥥</div>
+            <span>THENGA NETWORK</span> {sub_tag}
+        </a>
+        <div class="user-pill">
+            <img class="user-avatar" src="{user['avatar_url']}">
+            <span style="font-weight:700; color:#fff;">{user['username']}</span>
+            {badge_html}
+            <a href="/auth/logout" class="logout-btn">Logout</a>
+        </div>
+    </header>
+    """
 
 # ==========================================
 # PAGE 1: LANDING & GAME SELECTOR
@@ -261,18 +317,26 @@ async def handle_home(request: web.Request):
         html = f"""
         <!DOCTYPE html>
         <html>
-            <head><title>Thenga RP Hub</title><style>{COMMON_CSS}</style></head>
-            <body style="justify-content: center; align-items: center; text-align: center;">
-                <div class="card" style="max-width: 480px; padding: 40px;">
-                    <div style="font-size: 50px; margin-bottom: 12px;">🥥</div>
-                    <h1 style="color: var(--accent); font-size: 28px; margin-bottom: 8px;">Thenga Family Portal</h1>
-                    <p style="color: var(--text-secondary); margin-bottom: 30px; font-size: 15px;">
-                        Integrated Command Center for <b>Grand RP (EN2)</b> and <b>Libra RP (Fedrix)</b>
+            <head>
+                <title>Thenga Network Management Dashboard</title>
+                <style>{COMMON_CSS}</style>
+            </head>
+            <body style="justify-content: center; align-items: center; text-align: center; padding: 20px;">
+                <div class="card" style="max-width: 520px; width: 100%; padding: 48px 36px; border: 1px solid rgba(245, 158, 11, 0.45); box-shadow: 0 12px 50px rgba(0, 0, 0, 0.7), 0 0 40px rgba(245, 158, 11, 0.15); border-radius: 20px;">
+                    <div style="width: 90px; height: 90px; margin: 0 auto 18px; border-radius: 50%; background: radial-gradient(circle, rgba(245, 158, 11, 0.22) 0%, rgba(18, 24, 38, 0.95) 70%); display: flex; align-items: center; justify-content: center; border: 2px solid rgba(245, 158, 11, 0.55); box-shadow: 0 0 30px rgba(245, 158, 11, 0.35);">
+                        <span style="font-size: 50px; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.6));">🥥</span>
+                    </div>
+                    <h1 style="color: #fbbf24; font-size: 25px; font-weight: 800; margin-bottom: 8px; letter-spacing: -0.5px;">Thenga Network Management Dashboard</h1>
+                    <p style="color: #94a3b8; margin-bottom: 30px; font-size: 15px; line-height: 1.5;">
+                        Integrated command center for <b style="color: #f8fafc;">Thenga Network Malayali Club</b>
                     </p>
-                    <a href="/auth/login" class="btn btn-primary" style="width: 100%; padding: 14px; font-size: 16px;">
-                        🎮 Login with Discord
+                    <a href="/auth/login" class="btn" style="width: 100%; padding: 15px; font-size: 16px; font-weight: 700; background: #5865F2; color: #fff; border-radius: 10px; box-shadow: 0 4px 18px rgba(88, 101, 242, 0.4); text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                        <svg style="width: 22px; height: 22px; fill: currentColor;" viewBox="0 0 24 24"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515a.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0a12.64 12.64 0 0 0-.617-1.25a.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057a19.9 19.9 0 0 0 5.993 3.03a.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892a.077.077 0 0 1-.008-.128a10.2 10.2 0 0 0 .372-.292a.074.074 0 0 1 .077-.01c3.929 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127a12.299 12.299 0 0 1-1.873.894a.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028a19.839 19.839 0 0 0 6.002-3.03a.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.956-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.955-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.946 2.418-2.157 2.418z"/></svg>
+                        Login with Discord
                     </a>
-                    {"<p style='margin-top: 16px;'><a href='/auth/quick_login?user=superjedi' style='color:#64748b; font-size:12px; text-decoration:none;'>[Quick Dev Login as superjedi]</a></p>" if not CLIENT_SECRET else ""}
+                    <div style="margin-top: 22px; font-size: 12px; color: #64748b; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                        <span>🔒</span> Official Discord OAuth2 • Verified Members Only
+                    </div>
                 </div>
             </body>
         </html>
@@ -287,16 +351,9 @@ async def handle_home(request: web.Request):
     html = f"""
     <!DOCTYPE html>
     <html>
-        <head><title>Select Game • Thenga Portal</title><style>{COMMON_CSS}</style></head>
+        <head><title>Operations Hub • Thenga Network</title><style>{COMMON_CSS}</style></head>
         <body>
-            <header>
-                <a href="/" class="brand">🥥 THENGA NETWORK</a>
-                <div class="user-pill">
-                    <img class="user-avatar" src="{user['avatar_url']}">
-                    <span><b>{user['username']}</b></span>
-                    <a href="/auth/logout" class="logout-btn">Logout</a>
-                </div>
-            </header>
+            {render_header(user)}
 
             <main style="max-width: 960px; margin: 40px auto; width: 100%; padding: 0 20px;">
                 <div style="text-align: center; margin-bottom: 36px;">
@@ -430,16 +487,9 @@ async def handle_grand(request: web.Request):
     html = f"""
     <!DOCTYPE html>
     <html>
-        <head><title>Grand RP (EN2) • Dashboard</title><style>{COMMON_CSS}</style></head>
+        <head><title>Grand RP (EN2) • Thenga Network</title><style>{COMMON_CSS}</style></head>
         <body>
-            <header>
-                <a href="/" class="brand">🥥 THE NGA NETWORK <span style="font-size:14px; color:#64748b;">/ Grand RP</span></a>
-                <div class="user-pill">
-                    <img class="user-avatar" src="{user['avatar_url']}">
-                    <span><b>{user['username']}</b></span>
-                    <a href="/auth/logout" class="logout-btn">Logout</a>
-                </div>
-            </header>
+            {render_header(user, "Grand RP (EN2)")}
 
             <main style="max-width: 1200px; margin: 24px auto; width: 100%; padding: 0 20px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
@@ -749,16 +799,9 @@ async def handle_libra(request: web.Request):
     html = f"""
     <!DOCTYPE html>
     <html>
-        <head><title>Libra RP (Fedrix) • Dashboard</title><style>{COMMON_CSS}</style></head>
+        <head><title>Libra RP (Fedrix) • Thenga Network</title><style>{COMMON_CSS}</style></head>
         <body>
-            <header>
-                <a href="/" class="brand">🥥 THE NGA NETWORK <span style="font-size:14px; color:#64748b;">/ Libra RP</span></a>
-                <div class="user-pill">
-                    <img class="user-avatar" src="{user['avatar_url']}">
-                    <span><b>{user['username']}</b></span>
-                    <a href="/auth/logout" class="logout-btn">Logout</a>
-                </div>
-            </header>
+            {render_header(user, "Libra RP (Fedrix)")}
 
             <main style="max-width: 1200px; margin: 24px auto; width: 100%; padding: 0 20px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">

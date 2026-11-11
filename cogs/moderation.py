@@ -3,6 +3,7 @@ from discord import app_commands
 from discord.ext import commands
 from datetime import timedelta
 from typing import Optional
+from utils import is_admin_user
 
 class ModerationCog(commands.Cog, name="Family Moderation"):
     def __init__(self, bot: commands.Bot):
@@ -33,7 +34,7 @@ class ModerationCog(commands.Cog, name="Family Moderation"):
         reason: str = "Disciplinary action",
         announcement_channel: Optional[discord.TextChannel] = None
     ):
-        if not interaction.user.guild_permissions.moderate_members and interaction.user.id != interaction.guild.owner_id:
+        if not is_admin_user(interaction.user) and not interaction.user.guild_permissions.moderate_members and interaction.user.id != interaction.guild.owner_id:
             await interaction.response.send_message("❌ You do not have permission to moderate members.", ephemeral=True)
             return
 
@@ -84,7 +85,7 @@ class ModerationCog(commands.Cog, name="Family Moderation"):
         reason: str = "Inactivity or family violation",
         announcement_channel: Optional[discord.TextChannel] = None
     ):
-        if not interaction.user.guild_permissions.kick_members and interaction.user.id != interaction.guild.owner_id:
+        if not is_admin_user(interaction.user) and not interaction.user.guild_permissions.kick_members and interaction.user.id != interaction.guild.owner_id:
             await interaction.response.send_message("❌ You do not have permission to kick members.", ephemeral=True)
             return
 
@@ -133,7 +134,7 @@ class ModerationCog(commands.Cog, name="Family Moderation"):
         delete_message_days: int = 0,
         announcement_channel: Optional[discord.TextChannel] = None
     ):
-        if not interaction.user.guild_permissions.ban_members and interaction.user.id != interaction.guild.owner_id:
+        if not is_admin_user(interaction.user) and not interaction.user.guild_permissions.ban_members and interaction.user.id != interaction.guild.owner_id:
             await interaction.response.send_message("❌ You do not have permission to ban members.", ephemeral=True)
             return
 
