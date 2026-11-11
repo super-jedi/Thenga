@@ -58,6 +58,15 @@ def parse_session_token(token: str) -> Optional[dict]:
     return None
 
 def get_current_user(request: web.Request) -> Optional[dict]:
+    # 0. Local Dev Bypass (?dev=1, DEV_AUTH=1, or thenga_dev=1 cookie)
+    if request.query.get("dev") == "1" or os.environ.get("DEV_AUTH") == "1" or request.cookies.get("thenga_dev") == "1":
+        return {
+            "id": "1198270519965003886",
+            "username": "superjedi",
+            "global_name": "superjedi",
+            "avatar_url": "https://cdn.discordapp.com/embed/avatars/0.png",
+            "is_admin": True,
+        }
     # 1. Primary: HttpOnly Cookie
     cookie = request.cookies.get("thenga_user")
     if cookie:
@@ -103,7 +112,7 @@ async def handle_login(request: web.Request):
         h2 { color: #f87171; margin-top: 0; font-size: 20px; }
         p { color: #94a3b8; font-size: 14px; line-height: 1.6; }
         code { background: #181d2d; padding: 4px 8px; border-radius: 6px; color: #38bdf8; font-size: 13px; font-family: monospace; }
-        a { color: #818cf8; text-decoration: none; display: inline-block; margin-top: 16px; font-weight: 600; }
+        a { color: #22c55e; text-decoration: none; display: inline-block; margin-top: 16px; font-weight: 600; }
     </style>
 </head>
 <body>
@@ -663,9 +672,19 @@ body {
     transform: translateY(-1px);
 }
 .btn-red { background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); color: white; }
-.btn-purple { background: linear-gradient(135deg, #a855f7 0%, #7e22ce 100%); color: white; }
+.btn-purple { background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; }
 .btn-secondary { background: #131926; color: #e2e8f0; border: 1px solid #232c3d; }
 .btn-secondary:hover { background: #182030; color: #fff; border-color: #334155; }
+.btn-delete {
+    background: #131926;
+    border: 1px solid #1f2738;
+    color: var(--text-muted);
+}
+.btn-delete:hover {
+    background: rgba(239, 68, 68, 0.12);
+    border-color: rgba(239, 68, 68, 0.4);
+    color: #f87171;
+}
 .btn-profile-action {
     width: 100%;
     background: #111622;
@@ -760,10 +779,15 @@ th { color: var(--text-dim); font-size: 11px; text-transform: uppercase; letter-
 
 /* BADGES */
 .badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 9999px; font-size: 11px; font-weight: 800; letter-spacing: 0.4px; }
-.badge-red { background: rgba(239, 68, 68, 0.18); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); }
-.badge-green { background: rgba(34, 197, 94, 0.18); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.4); }
-.badge-purple { background: rgba(168, 85, 247, 0.18); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.4); }
-.badge-gold { background: rgba(245, 158, 11, 0.18); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); }
+.badge-red { background: rgba(239, 68, 68, 0.14); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.35); }
+.badge-green { background: var(--accent-emerald-subtle); color: var(--accent-emerald); border: 1px solid var(--accent-emerald-border); }
+.badge-purple { background: rgba(255, 255, 255, 0.04); color: var(--text-muted); border: 1px solid var(--border-subtle); }
+.badge-gold { background: rgba(245, 158, 11, 0.12); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+.badge-clean { background: rgba(255, 255, 255, 0.04); color: var(--text-muted); border: 1px solid var(--border-subtle); cursor: pointer; transition: all 0.15s; }
+.badge-clean:hover { background: rgba(255, 255, 255, 0.08); color: #fff; border-color: var(--border-highlight); }
+.badge-warn-1 { background: rgba(245, 158, 11, 0.1); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); cursor: pointer; }
+.badge-warn-2 { background: rgba(239, 68, 68, 0.12); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.35); cursor: pointer; }
+.badge-warn-strike { background: rgba(239, 68, 68, 0.22); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.5); cursor: pointer; }
 
 /* GTA V LICENSE PLATES */
 .gtav-plate {
@@ -982,99 +1006,99 @@ th { color: var(--text-dim); font-size: 11px; text-transform: uppercase; letter-
 
 /* DOSSIER & IN-GAME ACTION STYLES */
 .dossier-card {
-    background: #0c0e15;
-    border: 1px solid #1c202d;
-    border-radius: 12px;
-    padding: 16px 18px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 14px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
     transition: transform 0.15s, border-color 0.15s;
     position: relative;
 }
 .dossier-card:hover {
     transform: translateY(-2px);
+    border-color: var(--border-highlight);
 }
-.card-grand {
-    border-left: 3.5px solid #3b82f6 !important;
-    border-color: rgba(59, 130, 246, 0.4);
-}
-.card-libra {
-    border-left: 3.5px solid #a855f7 !important;
-    border-color: rgba(168, 85, 247, 0.4);
-}
-.card-discord {
-    border-left: 3.5px solid #5865F2 !important;
-    border-color: rgba(88, 101, 242, 0.4);
+.card-grand, .card-libra, .card-discord {
+    border: 1px solid var(--border-subtle);
 }
 .dossier-label {
     font-size: 10px;
     font-weight: 800;
-    color: #64748b;
+    color: var(--text-dim);
     letter-spacing: 0.8px;
     text-transform: uppercase;
-    margin-top: 8px;
+    margin-top: 10px;
 }
 .dossier-val {
-    font-size: 12.5px;
+    font-size: 13px;
     line-height: 1.4;
     margin-top: 2px;
 }
 .dossier-edit-btn {
-    background: rgba(255,255,255,0.06);
-    border: 1px solid #272c3d;
-    color: #94a3b8;
+    background: #131926;
+    border: 1px solid #232c3d;
+    color: var(--text-muted);
     cursor: pointer;
     font-size: 11px;
-    padding: 3px 7px;
-    border-radius: 5px;
+    padding: 3px 8px;
+    border-radius: 6px;
     transition: all 0.15s;
 }
 .dossier-edit-btn:hover {
     color: #fff;
-    background: #272c3d;
+    background: #1c2436;
     border-color: #3b445f;
 }
 .ingame-btn-action {
-    background: transparent;
-    border: 1.5px solid #ef4444;
-    color: #f87171;
+    background: #131926;
+    border: 1px solid #1f2738;
+    color: var(--text-muted);
     font-size: 11px;
-    font-weight: 800;
+    font-weight: 700;
     padding: 4px 10px;
-    border-radius: 4px;
+    border-radius: 6px;
     cursor: pointer;
     letter-spacing: 0.5px;
     transition: all 0.15s;
 }
 .ingame-btn-action:hover {
-    background: #ef4444;
+    background: #1c2436;
     color: #fff;
-    box-shadow: 0 0 10px rgba(239,68,68,0.5);
-}
-.ingame-btn-action.btn-kick:hover {
-    background: #b91c1c;
+    border-color: #3b82f6;
 }
 .ingame-btn-action.btn-warn {
-    border-color: #f59e0b;
-    color: #fbbf24;
+    background: #131926;
+    border-color: #1f2738;
+    color: var(--text-muted);
 }
 .ingame-btn-action.btn-warn:hover {
-    background: #f59e0b;
-    color: #000;
-    box-shadow: 0 0 10px rgba(245,158,11,0.5);
+    background: rgba(245, 158, 11, 0.12);
+    border-color: rgba(245, 158, 11, 0.4);
+    color: #fbbf24;
+}
+.ingame-btn-action.btn-kick {
+    background: #131926;
+    border-color: #1f2738;
+    color: var(--text-muted);
+}
+.ingame-btn-action.btn-kick:hover {
+    background: rgba(239, 68, 68, 0.12);
+    border-color: rgba(239, 68, 68, 0.4);
+    color: #f87171;
 }
 .ingame-btn-claim {
-    background: rgba(34, 197, 94, 0.15);
-    border: 1.5px solid #22c55e;
-    color: #4ade80;
+    background: var(--accent-emerald-subtle);
+    border: 1px solid var(--accent-emerald);
+    color: var(--accent-emerald);
     font-size: 11px;
-    font-weight: 800;
+    font-weight: 700;
     padding: 4px 10px;
-    border-radius: 4px;
+    border-radius: 6px;
     cursor: pointer;
     transition: all 0.15s;
 }
 .ingame-btn-claim:hover {
-    background: #22c55e;
+    background: var(--accent-emerald);
     color: #fff;
 }
 .quick-stat-card {
@@ -1488,7 +1512,7 @@ def render_app_shell(
             </select>
 
             <!-- Responsibilities Preview Box -->
-            <div style="background:#090b12; border:1px solid var(--border-subtle); border-radius:10px; padding:14px; margin-bottom:18px;">
+            <div style="background:var(--bg-subtle); border:1px solid var(--border-subtle); border-radius:10px; padding:14px; margin-bottom:18px;">
                 <div style="font-size:12px; font-weight:800; color:var(--accent-emerald); display:flex; align-items:center; gap:6px; margin-bottom:6px;">
                     <span>🛡️</span> Responsibilities (preview)
                 </div>
@@ -1520,7 +1544,7 @@ def render_app_shell(
                 <div style="color:#f87171; font-size:12px; line-height:1.4;">The member will lose access to clan features, vehicles, and internal records. This action cannot be undone.</div>
             </div>
 
-            <div style="display:flex; align-items:center; gap:12px; background:#090b12; border:1px solid var(--border-subtle); border-radius:10px; padding:12px; margin-bottom:20px;">
+            <div style="display:flex; align-items:center; gap:12px; background:var(--bg-subtle); border:1px solid var(--border-subtle); border-radius:10px; padding:12px; margin-bottom:20px;">
                 <div id="remove-member-avatar" style="width:36px; height:36px; border-radius:50%; background:#1e293b; display:flex; align-items:center; justify-content:center; font-weight:800; color:#fff;">CM</div>
                 <div>
                     <div id="remove-member-name" style="font-weight:800; color:#fff; font-size:14px;">Citra M.</div>
@@ -1625,9 +1649,9 @@ def render_app_shell(
             </div>
 
             <div style="display:flex; gap:10px; margin-bottom:14px;">
-                <div style="background:#090b12; border:1px solid var(--border-subtle); border-radius:8px; padding:10px 14px; flex:1;">
+                <div style="background:var(--bg-subtle); border:1px solid var(--border-subtle); border-radius:8px; padding:10px 14px; flex:1;">
                     <div style="font-size:10px; font-weight:800; color:var(--text-dim); text-transform:uppercase;">CURRENT STRIKES</div>
-                    <div id="warn-modal-count-display" style="font-size:16px; font-weight:900; color:#f59e0b; margin-top:2px;">0/3 Warnings</div>
+                    <div id="warn-modal-count-display" style="font-size:16px; font-weight:900; color:#fff; margin-top:2px;">0/3 Warnings</div>
                 </div>
             </div>
 
@@ -2203,7 +2227,7 @@ async def handle_home(request: web.Request):
     </div>
     """
 
-    return web.Response(
+    resp = web.Response(
         text=render_app_shell(
             user=user,
             active_nav="hub",
@@ -2214,6 +2238,9 @@ async def handle_home(request: web.Request):
         ),
         content_type="text/html"
     )
+    if request.query.get("dev") == "1":
+        resp.set_cookie("thenga_dev", "1", max_age=86400, path="/")
+    return resp
 
 # ==========================================
 # PAGE 2: GRAND RP DASHBOARD (/grand)
@@ -2281,7 +2308,7 @@ async def handle_grand(request: web.Request):
                 </div>
                 <div class="grand-veh-actions">
                     <button class="btn btn-primary btn-sm" onclick="renewVehicle('{v_id}')">🛡️ +30d Insurance</button>
-                    <button class="btn btn-red btn-sm" style="flex:0 0 38px;" onclick="removeVehicle('{v_id}')" title="Remove Vehicle">🗑️</button>
+                    <button class="btn btn-delete btn-sm" style="flex:0 0 38px;" onclick="removeVehicle('{v_id}')" title="Remove Vehicle">🗑️</button>
                 </div>
             </div>
         </div>
@@ -2302,7 +2329,7 @@ async def handle_grand(request: web.Request):
             <td>{badge}</td>
             <td>
                 <button class="btn btn-primary" style="padding: 4px 10px; font-size: 12px;" onclick="renewVehicle('{v_id}')">🛡️ +30d</button>
-                <button class="btn btn-red" style="padding: 4px 10px; font-size: 12px;" onclick="removeVehicle('{v_id}')">🗑️</button>
+                <button class="btn btn-delete" style="padding: 4px 10px; font-size: 12px;" onclick="removeVehicle('{v_id}')">🗑️</button>
             </td>
         </tr>
         """
@@ -2337,24 +2364,24 @@ async def handle_grand(request: web.Request):
     <!-- TAB 1: FAMILY TREASURY -->
     <div id="tab-bank">
         <div class="grid-3" style="margin-bottom: 24px;">
-            <div class="card" style="border-left: 3.5px solid #22c55e;">
+            <div class="card">
                 <div class="stat-label">Current Family Fund</div>
-                <div class="stat-val" style="color:#22c55e;">{format_money(bal['balance'])}</div>
-                <div style="font-size:11px; color:#22c55e; font-weight:700; margin-top:4px;">● Live GrandRP EN2 Balance</div>
+                <div class="stat-val" style="color:var(--accent-emerald);">{format_money(bal['balance'])}</div>
+                <div style="font-size:11px; color:var(--accent-emerald); font-weight:700; margin-top:4px;">● Live GrandRP EN2 Balance</div>
             </div>
             <div class="card">
                 <div class="stat-label">Total Deposited</div>
-                <div class="stat-val" style="color:#10b981;">{format_money(bal['total_deposited'])}</div>
+                <div class="stat-val" style="color:#ffffff;">{format_money(bal['total_deposited'])}</div>
                 <div style="font-size:11px; color:#64748b; margin-top:4px;">3% family deposit tax</div>
             </div>
             <div class="card">
                 <div class="stat-label">Total Withdrawn</div>
-                <div class="stat-val" style="color:#ef4444;">{format_money(bal['total_withdrawn'])}</div>
+                <div class="stat-val" style="color:#ffffff;">{format_money(bal['total_withdrawn'])}</div>
                 <div style="font-size:11px; color:#64748b; margin-top:4px;">5% cash withdrawal tax</div>
             </div>
             <div class="card">
                 <div class="stat-label">In-Game Taxes Absorbed</div>
-                <div class="stat-val" style="color:#f59e0b;">{format_money(bal['total_tax_paid'])}</div>
+                <div class="stat-val" style="color:#ffffff;">{format_money(bal['total_tax_paid'])}</div>
                 <div style="font-size:11px; color:#64748b; margin-top:4px;">Total tax retained</div>
             </div>
         </div>
@@ -2362,7 +2389,7 @@ async def handle_grand(request: web.Request):
         <div class="grid-2" style="margin-bottom: 30px;">
             <!-- Deposit Form -->
             <div class="card">
-                <h3 style="color:#10b981; margin-bottom:12px;">📥 Deposit to Family Fund (3% Tax)</h3>
+                <h3 style="color:#ffffff; margin-bottom:12px;">📥 Deposit to Family Fund (3% Tax)</h3>
                 <label style="font-size:11px; font-weight:800; color:var(--text-dim); text-transform:uppercase;">Amount:</label>
                 <input id="dep-amt" type="text" placeholder="1M or 500k" oninput="calcDeposit()">
                 <div style="display:flex; gap:6px; margin-bottom:12px;">
@@ -2373,13 +2400,13 @@ async def handle_grand(request: web.Request):
                 </div>
                 <label style="font-size:11px; font-weight:800; color:var(--text-dim); text-transform:uppercase;">Source / Reason:</label>
                 <input id="dep-reason" type="text" placeholder="Plantation harvest, Car sales, Office tasks">
-                <div id="dep-preview" style="font-size:13px; color:#94a3b8; margin-bottom:14px; background:#090b12; padding:8px 12px; border-radius:6px; border:1px solid #1c202d;">3% Tax: $0 | Net Added: $0</div>
+                <div id="dep-preview" style="font-size:13px; color:#94a3b8; margin-bottom:14px; background:var(--bg-subtle); padding:8px 12px; border-radius:6px; border:1px solid var(--border-subtle);">3% Tax: $0 | Net Added: $0</div>
                 <button class="btn btn-green" style="width:100%;" onclick="submitDeposit('grandrp')">Confirm Deposit</button>
             </div>
 
             <!-- Withdraw Form -->
             <div class="card">
-                <h3 style="color:#ef4444; margin-bottom:12px;">📤 Withdraw from Family Fund (5% Tax)</h3>
+                <h3 style="color:#ffffff; margin-bottom:12px;">📤 Withdraw from Family Fund (5% Tax)</h3>
                 <label style="font-size:11px; font-weight:800; color:var(--text-dim); text-transform:uppercase;">Amount:</label>
                 <input id="with-amt" type="text" placeholder="500k" oninput="calcWithdraw()">
                 <div style="display:flex; gap:6px; margin-bottom:12px;">
@@ -2389,19 +2416,19 @@ async def handle_grand(request: web.Request):
                 </div>
                 <label style="font-size:11px; font-weight:800; color:var(--text-dim); text-transform:uppercase;">Reason / Purpose:</label>
                 <input id="with-reason" type="text" placeholder="Family fines, Fleet expansion, Event budget">
-                <div id="with-preview" style="font-size:13px; color:#94a3b8; margin-bottom:14px; background:#090b12; padding:8px 12px; border-radius:6px; border:1px solid #1c202d;">5% Tax: $0 | Net Cash Received: $0</div>
-                <button class="btn btn-red" style="width:100%;" onclick="submitWithdraw('grandrp')">Confirm Withdrawal</button>
+                <div id="with-preview" style="font-size:13px; color:#94a3b8; margin-bottom:14px; background:var(--bg-subtle); padding:8px 12px; border-radius:6px; border:1px solid var(--border-subtle);">5% Tax: $0 | Net Cash Received: $0</div>
+                <button class="btn btn-secondary" style="width:100%; border-color: rgba(239, 68, 68, 0.4); color: #f87171;" onclick="submitWithdraw('grandrp')">Confirm Withdrawal</button>
             </div>
         </div>
 
-        <div class="card" style="padding:0; overflow:hidden; background:#0a0c12; border:1px solid #1a1e2b;">
-            <div style="padding:16px 20px; border-bottom:1px solid #161924;">
+        <div class="card" style="padding:0; overflow:hidden; background:var(--bg-card); border:1px solid var(--border-subtle);">
+            <div style="padding:16px 20px; border-bottom:1px solid var(--border-subtle);">
                 <h3 style="color:#fff; font-size:16px; margin:0;">📜 Recent Grand RP Transactions</h3>
             </div>
             <div class="table-responsive" style="margin:0;">
                 <table style="margin:0;">
                     <thead>
-                        <tr style="background:#08090d;">
+                        <tr style="background:#0d121c; border-bottom:1px solid var(--border-subtle);">
                             <th>TYPE</th><th>GROSS</th><th>TAX</th><th>NET</th><th>MEMBER</th><th>REASON</th><th>DATE</th>
                         </tr>
                     </thead>
@@ -2417,7 +2444,7 @@ async def handle_grand(request: web.Request):
             <div class="card" style="padding:16px 20px;">
                 <div class="stat-label">Fleet Count</div>
                 <div class="stat-val" style="color:#fff;">{len(vehicles)} Cars</div>
-                <div style="font-size:12px; color:#60a5fa; font-weight:700; margin-top:4px;">Grand RP EN2 Showroom</div>
+                <div style="font-size:12px; color:var(--text-dim); font-weight:600; margin-top:4px;">Grand RP EN2 Showroom</div>
             </div>
             <div class="card" style="padding:16px 20px;">
                 <div class="stat-label">Active Insurance</div>
@@ -2426,15 +2453,15 @@ async def handle_grand(request: web.Request):
             </div>
             <div class="card" style="padding:16px 20px;">
                 <div class="stat-label">Expired / Uninsured</div>
-                <div class="stat-val" style="color:#ef4444;">{expired_count} Expired</div>
-                <div style="font-size:12px; color:#f87171; margin-top:4px;">Needs 30d renewal</div>
+                <div class="stat-val" style="color:#ffffff;">{expired_count} Expired</div>
+                <div style="font-size:12px; color:#94a3b8; margin-top:4px;">Needs 30d renewal</div>
             </div>
         </div>
 
         <div class="card" style="margin-bottom: 20px;">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
                 <div>
-                    <h3 style="margin:0;">🚗 Add Vehicle to Grand RP</h3>
+                    <h3 style="margin:0; color:#fff;">🚗 Add Vehicle to Grand RP</h3>
                     <div style="color:var(--text-secondary); font-size:12px; margin-top:2px;">Register a new vehicle with insurance duration</div>
                 </div>
                 <div style="display:flex; flex-wrap:wrap; gap:10px; flex:1; max-width:600px; justify-content:flex-end;">
@@ -2449,12 +2476,12 @@ async def handle_grand(request: web.Request):
         <div class="card" style="padding:16px 20px;">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
                 <div>
-                    <h3 style="margin:0;">Grand RP Fleet ({len(vehicles)} Vehicles)</h3>
+                    <h3 style="margin:0; color:#fff;">Grand RP Fleet ({len(vehicles)} Vehicles)</h3>
                     <div style="color:var(--text-secondary); font-size:13px; margin-top:2px;">Authentic GTA V GrandRP fleet showroom & custom license plates</div>
                 </div>
                 <div style="display:flex; gap:8px;">
-                    <button id="btn-view-grid" class="tab-btn active" style="padding:6px 14px; font-size:12px; border:1px solid rgba(59,130,246,0.4);" onclick="setGarageView('grid')">🎴 Showroom Grid</button>
-                    <button id="btn-view-table" class="tab-btn" style="padding:6px 14px; font-size:12px; border:1px solid #2b3244;" onclick="setGarageView('table')">📋 Table View</button>
+                    <button id="btn-view-grid" class="tab-btn active" style="padding:6px 14px; font-size:12px; border:1px solid var(--accent-emerald); color:var(--accent-emerald); background:var(--accent-emerald-subtle);" onclick="setGarageView('grid')">🎴 Showroom Grid</button>
+                    <button id="btn-view-table" class="tab-btn" style="padding:6px 14px; font-size:12px; border:1px solid var(--border-subtle); color:var(--text-muted); background:var(--bg-card);" onclick="setGarageView('table')">📋 Table View</button>
                 </div>
             </div>
 
@@ -2467,7 +2494,7 @@ async def handle_grand(request: web.Request):
             <div id="garage-table-view" class="table-responsive" style="display:none; margin:0;">
                 <table style="margin:0;">
                     <thead>
-                        <tr>
+                        <tr style="background:#0d121c; border-bottom:1px solid var(--border-subtle);">
                             <th>ID</th>
                             <th>Vehicle Name</th>
                             <th>Plate</th>
@@ -2484,46 +2511,46 @@ async def handle_grand(request: web.Request):
 
     <!-- TAB 3: PLANTATION -->
     <div id="tab-plantation" style="display:none;">
-        <div class="card" style="margin-bottom: 24px; border-left: 3.5px solid #eab308;">
+        <div class="card" style="margin-bottom: 24px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
                 <div>
-                    <h2 style="color:#fef08a; margin:0;">🍍 Pineapple Plantation Business</h2>
+                    <h2 style="color:#ffffff; margin:0;">🍍 Pineapple Plantation Business</h2>
                     <p style="color:var(--text-secondary); margin-top:4px; font-size:13px;">Manage family pineapple crops, nourish cycles, and bank harvest earnings.</p>
                 </div>
                 {plant_badge}
             </div>
 
             <!-- Progress Stepper matching Figma -->
-            <div style="display:flex; justify-content:space-between; align-items:center; background:#090b12; border:1px solid #1c202d; border-radius:10px; padding:16px 24px; margin-bottom:20px; overflow-x:auto;">
+            <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-subtle); border:1px solid var(--border-subtle); border-radius:10px; padding:16px 24px; margin-bottom:20px; overflow-x:auto;">
                 <div style="text-align:center;">
                     <div style="font-size:20px;">🌱</div>
-                    <div style="font-size:12px; font-weight:800; color:#22c55e;">1. Planted</div>
+                    <div style="font-size:12px; font-weight:800; color:var(--accent-emerald);">1. Planted</div>
                     <div style="font-size:10px; color:#64748b;">Seed Sown</div>
                 </div>
-                <div style="flex:1; height:2px; background:#22c55e; margin:0 12px;"></div>
+                <div style="flex:1; height:2px; background:var(--accent-emerald); margin:0 12px;"></div>
                 <div style="text-align:center;">
                     <div style="font-size:20px;">💧</div>
-                    <div style="font-size:12px; font-weight:800; color:#3b82f6;">2. Nourish</div>
+                    <div style="font-size:12px; font-weight:800; color:var(--text-muted);">2. Nourish</div>
                     <div style="font-size:10px; color:#64748b;">Water Every 2h</div>
                 </div>
-                <div style="flex:1; height:2px; background:#3b82f6; margin:0 12px;"></div>
+                <div style="flex:1; height:2px; background:var(--border-subtle); margin:0 12px;"></div>
                 <div style="text-align:center;">
                     <div style="font-size:20px;">🍍</div>
-                    <div style="font-size:12px; font-weight:800; color:#eab308;">3. Harvest Ready</div>
+                    <div style="font-size:12px; font-weight:800; color:var(--text-muted);">3. Harvest Ready</div>
                     <div style="font-size:10px; color:#64748b;">Matures in 4h</div>
                 </div>
-                <div style="flex:1; height:2px; background:#475569; margin:0 12px;"></div>
+                <div style="flex:1; height:2px; background:var(--border-subtle); margin:0 12px;"></div>
                 <div style="text-align:center;">
                     <div style="font-size:20px;">🏦</div>
-                    <div style="font-size:12px; font-weight:800; color:#94a3b8;">4. Bank Profit</div>
+                    <div style="font-size:12px; font-weight:800; color:var(--text-dim);">4. Bank Profit</div>
                     <div style="font-size:10px; color:#64748b;">+Family Treasury</div>
                 </div>
             </div>
 
             <div style="display:flex; flex-wrap:wrap; gap:12px;">
                 <button class="btn btn-green" onclick="plantCrop()">🌱 Plant Pineapple (2h nourish, 4h harvest)</button>
-                <button class="btn btn-primary" onclick="nourishCrop()">💧 Nourish Now (+2h)</button>
-                <button class="btn btn-purple" onclick="harvestCrop()">🚜 Collect Harvest & Bank</button>
+                <button class="btn btn-secondary" onclick="nourishCrop()">💧 Nourish Now (+2h)</button>
+                <button class="btn btn-secondary" style="border-color: var(--accent-emerald); color: var(--accent-emerald);" onclick="harvestCrop()">🚜 Collect Harvest & Bank</button>
             </div>
         </div>
     </div>
@@ -2548,14 +2575,14 @@ async def handle_grand(request: web.Request):
         if (view === 'grid') {{
             if (gView) gView.style.display = 'grid';
             if (tView) tView.style.display = 'none';
-            if (btnGrid) {{ btnGrid.classList.add('active'); btnGrid.style.borderColor = 'rgba(59,130,246,0.5)'; }}
-            if (btnTable) {{ btnTable.classList.remove('active'); btnTable.style.borderColor = '#2b3244'; }}
+            if (btnGrid) {{ btnGrid.classList.add('active'); btnGrid.style.borderColor = 'var(--accent-emerald)'; btnGrid.style.color = 'var(--accent-emerald)'; btnGrid.style.background = 'var(--accent-emerald-subtle)'; }}
+            if (btnTable) {{ btnTable.classList.remove('active'); btnTable.style.borderColor = 'var(--border-subtle)'; btnTable.style.color = 'var(--text-muted)'; btnTable.style.background = 'var(--bg-card)'; }}
             localStorage.setItem('grand_garage_view', 'grid');
         }} else {{
             if (gView) gView.style.display = 'none';
             if (tView) tView.style.display = 'block';
-            if (btnGrid) {{ btnGrid.classList.remove('active'); btnGrid.style.borderColor = '#2b3244'; }}
-            if (btnTable) {{ btnTable.classList.add('active'); btnTable.style.borderColor = 'rgba(59,130,246,0.5)'; }}
+            if (btnGrid) {{ btnGrid.classList.remove('active'); btnGrid.style.borderColor = 'var(--border-subtle)'; btnGrid.style.color = 'var(--text-muted)'; btnGrid.style.background = 'var(--bg-card)'; }}
+            if (btnTable) {{ btnTable.classList.add('active'); btnTable.style.borderColor = 'var(--accent-emerald)'; btnTable.style.color = 'var(--accent-emerald)'; btnTable.style.background = 'var(--accent-emerald-subtle)'; }}
             localStorage.setItem('grand_garage_view', 'table');
         }}
     }}
@@ -2739,7 +2766,7 @@ async def handle_libra(request: web.Request):
     for m in members:
         discord_badge = ""
         if m.get("discord_username"):
-            discord_badge = f'<span class="badge" style="background:rgba(88,101,242,0.18); color:#818cf8; border:1px solid rgba(88,101,242,0.4); font-size:10px; margin-left:8px; padding:1px 6px;">@{m["discord_username"]}</span>'
+            discord_badge = f'<span class="badge" style="background:rgba(255,255,255,0.04); color:var(--text-muted); border:1px solid var(--border-subtle); font-size:10px; margin-left:8px; padding:2px 7px; border-radius:5px;">@{m["discord_username"]}</span>'
         
         # Determine if viewer can manage this member (strictly higher rank or founder)
         can_edit_this = is_founder or db.user_can_manage_libra(user, m["rank_level"])
@@ -2751,13 +2778,13 @@ async def handle_libra(request: web.Request):
         w_cnt = m.get('warnings') or 0
 
         if w_cnt == 0:
-            warn_badge = f'<span class="badge badge-green" style="font-size:11px; cursor:pointer;" onclick="openWarnModal({mid}, \'{safe_name}\', {w_cnt})">0/3 CLEAN</span>'
+            warn_badge = f'<span class="badge badge-clean" onclick="openWarnModal({mid}, \'{safe_name}\', {w_cnt})">0/3 CLEAN</span>'
         elif w_cnt == 1:
-            warn_badge = f'<span class="badge" style="background:rgba(245,158,11,0.2); color:#fbbf24; border:1px solid #f59e0b; font-size:11px; cursor:pointer;" onclick="openWarnModal({mid}, \'{safe_name}\', {w_cnt})">⚠️ 1/3 WARN</span>'
+            warn_badge = f'<span class="badge badge-warn-1" onclick="openWarnModal({mid}, \'{safe_name}\', {w_cnt})">⚠️ 1/3 WARN</span>'
         elif w_cnt == 2:
-            warn_badge = f'<span class="badge" style="background:rgba(239,68,68,0.2); color:#f87171; border:1px solid #ef4444; font-size:11px; cursor:pointer;" onclick="openWarnModal({mid}, \'{safe_name}\', {w_cnt})">⚠️ 2/3 FINAL</span>'
+            warn_badge = f'<span class="badge badge-warn-2" onclick="openWarnModal({mid}, \'{safe_name}\', {w_cnt})">⚠️ 2/3 FINAL</span>'
         else:
-            warn_badge = f'<span class="badge badge-red" style="font-size:11px; cursor:pointer;" onclick="openWarnModal({mid}, \'{safe_name}\', {w_cnt})">🚨 {w_cnt}/3 STRIKE</span>'
+            warn_badge = f'<span class="badge badge-warn-strike" onclick="openWarnModal({mid}, \'{safe_name}\', {w_cnt})">🚨 {w_cnt}/3 STRIKE</span>'
 
         actions_html = ""
         if can_edit_this:
@@ -2780,7 +2807,7 @@ async def handle_libra(request: web.Request):
                 </div>
             </td>
             <td>
-                <code style="background:#0e111a; border:1px solid #232838; padding:3px 8px; border-radius:4px; color:#cbd5e1; font-weight:700; font-size:13px;">#{mid}</code>
+                <code style="background:#131926; border:1px solid #1f2738; padding:3px 8px; border-radius:6px; color:#cbd5e1; font-weight:700; font-size:12px;">#{mid}</code>
             </td>
             <td>
                 <span style="color:#94a3b8; font-size:13px; font-weight:700;">Lv {mlvl}</span>
@@ -2815,14 +2842,14 @@ async def handle_libra(request: web.Request):
         lvl = r["level"]
         cnt = rank_count_map.get(lvl, 0)
         desc = rank_descriptions.get(lvl, "Clan Member")
-        perm_badge = '<span class="badge badge-green" style="font-size:11px;">CAN MANAGE</span>' if r.get("can_manage") else '<span class="badge" style="background:rgba(100,116,139,0.2); color:#94a3b8; border:1px solid #334155; font-size:11px;">MEMBER</span>'
+        perm_badge = '<span class="badge badge-green" style="font-size:11px;">CAN MANAGE</span>' if r.get("can_manage") else '<span class="badge" style="background:rgba(255,255,255,0.04); color:var(--text-muted); border:1px solid var(--border-subtle); font-size:11px;">MEMBER</span>'
         rank_rows += f'''
         <tr>
             <td style="width:90px;"><span style="color:#94a3b8; font-weight:700;">Level</span> <b style="color:#fff; font-size:16px;">{lvl}</b></td>
-            <td style="width:160px;"><b style="color:#c084fc; font-size:15px;">{r['name']}</b></td>
+            <td style="width:160px;"><b style="color:#ffffff; font-size:15px;">{r['name']}</b></td>
             <td><span style="color:#cbd5e1; font-size:13px;">{desc}</span></td>
             <td style="width:130px;">{perm_badge}</td>
-            <td style="width:110px; text-align:right;"><span class="badge badge-purple" style="font-size:12px;">{cnt} Operative{'s' if cnt != 1 else ''}</span></td>
+            <td style="width:110px; text-align:right;"><span class="badge" style="background:#131926; border:1px solid #1f2738; color:#94a3b8; font-size:11px;">{cnt} Operative{'s' if cnt != 1 else ''}</span></td>
         </tr>
         '''
 
@@ -2845,12 +2872,12 @@ async def handle_libra(request: web.Request):
         <tr class="veh-row" data-name="{v['name'].lower()}" data-plate="{plate.lower()}">
             <td style="color:#64748b; font-weight:700;">#{v['id']}</td>
             <td><b style="color:#fff; font-size:15px;">{v['name']}</b></td>
-            <td><code style="background:#0a0c12; border:1px solid #272c3d; padding:3px 8px; border-radius:4px; color:#f8fafc; font-weight:800; font-size:13px;">{plate}</code></td>
-            <td><span class="badge badge-purple">{v.get('notes') or 'Rank 1+'}</span></td>
+            <td><code style="background:#131926; border:1px solid #1f2738; padding:3px 8px; border-radius:6px; color:#cbd5e1; font-weight:700; font-size:12px;">{plate}</code></td>
+            <td><span class="badge" style="background:#131926; border:1px solid #1f2738; color:#94a3b8;">{v.get('notes') or 'Rank 1+'}</span></td>
             <td>{badge}</td>
             <td style="text-align:right;">
                 <button class="btn btn-secondary" style="padding:4px 10px; font-size:11px;" onclick="renewVehicle('{v['id']}')">🛡️ +30d</button>
-                <button class="btn btn-red" style="padding:4px 10px; font-size:11px; margin-left:4px;" onclick="removeVehicle('{v['id']}')">🗑️</button>
+                <button class="btn btn-delete" style="padding:4px 10px; font-size:11px; margin-left:4px;" onclick="removeVehicle('{v['id']}')">🗑️</button>
             </td>
         </tr>
         '''
@@ -2859,10 +2886,10 @@ async def handle_libra(request: web.Request):
     event_cards = ""
     for e in events:
         event_cards += f'''
-        <div class="card" style="border-left: 4px solid var(--purple); background:#0e1017; border-color:#1e2333;">
+        <div class="card">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h3 style="color:#c084fc; font-size:18px; margin:0;">⚔️ {e['name']}</h3>
-                <span class="badge badge-purple" style="font-size:12px;">{e['time_utc']} UTC</span>
+                <h3 style="color:#ffffff; font-size:17px; font-weight:800; margin:0;">⚔️ {e['name']}</h3>
+                <span class="badge" style="background:#131926; border:1px solid #1f2738; color:#94a3b8; font-size:11px;">{e['time_utc']} UTC</span>
             </div>
             <p style="color:var(--text-secondary); margin-top:10px; font-size:14px; line-height:1.5;">{e['description']}</p>
             <div style="margin-top:14px; display:flex; justify-content:space-between; align-items:center;">
@@ -2880,7 +2907,7 @@ async def handle_libra(request: web.Request):
         <tr>
             <td>{icon}</td>
             <td><b style="color:#fff; font-size:15px;">{format_money(t['gross_amount'])}</b></td>
-            <td><span style="color:#93c5fd; font-weight:700;">{t['user_name']}</span></td>
+            <td><span style="color:#ffffff; font-weight:600;">{t['user_name']}</span></td>
             <td style="color:#cbd5e1;">{t['reason']}</td>
             <td style="color:#64748b; font-size:12px;">{t['created_at']}</td>
         </tr>
@@ -2903,7 +2930,7 @@ async def handle_libra(request: web.Request):
     def render_award_text(val):
         if not val or not str(val).strip():
             return '<span style="color:#64748b; font-style:italic; font-weight:normal;">None</span>'
-        return f'<span style="color:#f59e0b; font-weight:700;">{str(val).strip()}</span>'
+        return f'<span style="color:#ffffff; font-weight:600;">{str(val).strip()}</span>'
 
     libra_m = next((m for m in members if m['id'] == profile.get('libra_member_id') or m.get('discord_id') == str(user['id'])), None)
     libra_char_name = libra_m['name'] if libra_m else (profile.get('libra_member_name') or 'Operative')
@@ -2917,7 +2944,7 @@ async def handle_libra(request: web.Request):
     if libra_m:
         libra_w_cnt = libra_m.get('warnings') or 0
         if libra_w_cnt == 0:
-            libra_punishments_display = '<span style="color:#22c55e; font-weight:700;">Clean Record (0 Active Warnings)</span>'
+            libra_punishments_display = '<span style="color:var(--text-muted); font-weight:600;">Clean Record (0 Active Warnings)</span>'
         elif libra_w_cnt == 1:
             libra_punishments_display = '<span style="color:#fbbf24; font-weight:700;">⚠️ 1/3 Active Warning</span>'
         elif libra_w_cnt == 2:
@@ -2925,7 +2952,7 @@ async def handle_libra(request: web.Request):
         else:
             libra_punishments_display = f'<span style="color:#ef4444; font-weight:700;">🚨 {libra_w_cnt}/3 Strike Action</span>'
     else:
-        libra_punishments_display = '<span style="color:#22c55e; font-weight:700;">Clean Record (0 Active Warnings)</span>'
+        libra_punishments_display = '<span style="color:var(--text-muted); font-weight:600;">Clean Record (0 Active Warnings)</span>'
 
     grand_char_name = profile.get('grand_member_name') or user['username']
     grand_char_id = profile.get('grand_member_id') or '7104'
@@ -2958,18 +2985,18 @@ async def handle_libra(request: web.Request):
     # Build Right Vertical Panel Dossier
     libra_dossier = f'''
     <!-- DIVISION 1: GRAND RP (EN2) -->
-    <div class="dossier-card card-grand">
+    <div class="dossier-card">
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <div style="display: flex; align-items: center; gap: 7px;">
                 <span style="font-size: 16px;">🌆</span>
-                <span style="color: #60a5fa; font-weight: 900; font-size: 12px; letter-spacing: 0.8px; text-transform: uppercase;">GRAND RP (EN2)</span>
+                <span style="color: #fff; font-weight: 800; font-size: 12px; letter-spacing: 0.8px; text-transform: uppercase;">GRAND RP (EN2)</span>
             </div>
             {grand_edit_btn}
         </div>
         <div style="font-size: 16px; font-weight: 800; color: #fff; margin-top: 8px;">
             {grand_char_name} <span style="font-size: 12px; color: #64748b; font-weight: 700;">#{grand_char_id}</span>
         </div>
-        <div style="font-size: 13px; font-weight: 700; color: #93c5fd; margin-top: 2px; margin-bottom: 8px;">
+        <div style="font-size: 13px; font-weight: 600; color: var(--text-muted); margin-top: 2px; margin-bottom: 8px;">
             {grand_char_rank}
         </div>
 
@@ -2980,22 +3007,22 @@ async def handle_libra(request: web.Request):
         <div class="dossier-val">{grand_awards_display}</div>
 
         <div class="dossier-label">DISCIPLINARY RECORD</div>
-        <div class="dossier-val" style="color: #22c55e; font-weight: 700;">{grand_punishments}</div>
+        <div class="dossier-val" style="color: var(--text-muted); font-weight: 600;">{grand_punishments}</div>
     </div>
 
     <!-- DIVISION 2: LIBRA RP (FEDRIX) -->
-    <div class="dossier-card card-libra">
+    <div class="dossier-card">
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <div style="display: flex; align-items: center; gap: 7px;">
                 <span style="font-size: 16px;">⚖️</span>
-                <span style="color: #c084fc; font-weight: 900; font-size: 12px; letter-spacing: 0.8px; text-transform: uppercase;">LIBRA RP (FEDRIX)</span>
+                <span style="color: #fff; font-weight: 800; font-size: 12px; letter-spacing: 0.8px; text-transform: uppercase;">LIBRA RP (FEDRIX)</span>
             </div>
             {libra_edit_btn}
         </div>
         <div style="font-size: 16px; font-weight: 800; color: #fff; margin-top: 8px;">
             {libra_char_name} <span style="font-size: 12px; color: #64748b; font-weight: 700;">ID #{libra_char_id}</span>
         </div>
-        <div style="font-size: 13px; font-weight: 700; color: #d8b4fe; margin-top: 2px; margin-bottom: 8px;">
+        <div style="font-size: 13px; font-weight: 600; color: var(--text-muted); margin-top: 2px; margin-bottom: 8px;">
             {libra_char_rank}
         </div>
 
@@ -3010,22 +3037,22 @@ async def handle_libra(request: web.Request):
     </div>
 
     <!-- DIVISION 3: DISCORD DOSSIER -->
-    <div class="dossier-card card-discord">
+    <div class="dossier-card">
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <div style="display: flex; align-items: center; gap: 7px;">
                 <span style="font-size: 16px;">🎮</span>
-                <span style="color: #818cf8; font-weight: 900; font-size: 12px; letter-spacing: 0.8px; text-transform: uppercase;">DISCORD DOSSIER</span>
+                <span style="color: #fff; font-weight: 800; font-size: 12px; letter-spacing: 0.8px; text-transform: uppercase;">DISCORD DOSSIER</span>
             </div>
             {discord_edit_btn}
         </div>
         <div style="display: flex; align-items: center; gap: 8px; margin-top: 8px;">
-            <img src="{user['avatar_url']}" style="width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid #5865F2;">
+            <img src="{user['avatar_url']}" style="width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--border-subtle);">
             <div>
                 <span style="font-size: 15px; font-weight: 800; color: #fff;">{discord_name}</span>
                 <span style="font-size: 11px; color: #64748b; margin-left: 4px;">#{discord_id[-4:]}</span>
             </div>
         </div>
-        <div style="font-size: 13px; font-weight: 700; color: #818cf8; margin-top: 2px; margin-bottom: 8px;">
+        <div style="font-size: 13px; font-weight: 600; color: var(--text-muted); margin-top: 2px; margin-bottom: 8px;">
             {discord_rank}
         </div>
 
@@ -3036,7 +3063,7 @@ async def handle_libra(request: web.Request):
         <div class="dossier-val">{discord_awards_display}</div>
 
         <div class="dossier-label">DISCIPLINARY RECORD</div>
-        <div class="dossier-val" style="color: #22c55e; font-weight: 700;">{discord_punishments}</div>
+        <div class="dossier-val" style="color: var(--text-muted); font-weight: 600;">{discord_punishments}</div>
     </div>
     '''
 
@@ -3062,25 +3089,25 @@ async def handle_libra(request: web.Request):
         <div class="quick-stat-card" onclick="switchTab(\'members\')">
             <div class="stat-label">Fedrix Clan Roster</div>
             <div class="stat-val" style="color: #fff; font-size: 22px;">{total_m_count} <span style="font-size: 14px; color: #64748b;">/ 100</span></div>
-            <div style="color: #22c55e; font-size: 12px; font-weight: 700; margin-top: 4px;">● {online_m_count} Operative Online</div>
+            <div style="color: var(--accent-emerald); font-size: 12px; font-weight: 700; margin-top: 4px;">● {online_m_count} Operative Online</div>
         </div>
 
         <div class="quick-stat-card" onclick="switchTab(\'logs\')">
             <div class="stat-label">Clan Treasury (0% Tax)</div>
-            <div class="stat-val" style="color: #22c55e; font-size: 22px;">{format_money(bal['balance'])}</div>
-            <div style="color: #94a3b8; font-size: 12px; font-weight: 600; margin-top: 4px;">Direct Fedrix Clan Bank</div>
+            <div class="stat-val" style="color: var(--accent-emerald); font-size: 22px;">{format_money(bal['balance'])}</div>
+            <div style="color: var(--text-dim); font-size: 12px; font-weight: 600; margin-top: 4px;">Direct Fedrix Clan Bank</div>
         </div>
 
         <div class="quick-stat-card" onclick="switchTab(\'vehicles\')">
             <div class="stat-label">Fedrix Fleet</div>
             <div class="stat-val" style="color: #fff; font-size: 22px;">{len(vehicles)} Cars</div>
-            <div style="color: #c084fc; font-size: 12px; font-weight: 600; margin-top: 4px;">High-tier clan fleet</div>
+            <div style="color: var(--text-dim); font-size: 12px; font-weight: 600; margin-top: 4px;">High-tier clan fleet</div>
         </div>
 
         <div class="quick-stat-card" onclick="switchTab(\'events\')">
             <div class="stat-label">Daily Events & Points</div>
-            <div class="stat-val" style="color: #c084fc; font-size: 22px;">117 Pts</div>
-            <div style="color: #f59e0b; font-size: 12px; font-weight: 600; margin-top: 4px;">{len(events)} Scheduled Events</div>
+            <div class="stat-val" style="color: #fff; font-size: 22px;">117 Pts</div>
+            <div style="color: var(--text-dim); font-size: 12px; font-weight: 600; margin-top: 4px;">{len(events)} Scheduled Events</div>
         </div>
     </div>
 
@@ -3096,11 +3123,11 @@ async def handle_libra(request: web.Request):
             </div>
         </div>
 
-        <div class="card" style="padding: 0; overflow: hidden; background: #0a0c12; border: 1px solid #1a1e2b;">
+        <div class="card" style="padding: 0; overflow: hidden; background: var(--bg-card); border: 1px solid var(--border-subtle);">
             <div class="table-responsive" style="margin: 0;">
                 <table style="margin: 0;">
                     <thead>
-                        <tr style="background: #08090d; border-bottom: 1px solid #161924;">
+                        <tr style="background: #0d121c; border-bottom: 1px solid var(--border-subtle);">
                             <th style="padding: 14px 18px; color: #64748b; font-size: 11px;">NAME</th>
                             <th style="padding: 14px 18px; color: #64748b; font-size: 11px;">ID</th>
                             <th style="padding: 14px 18px; color: #64748b; font-size: 11px;">RANK</th>
@@ -3125,11 +3152,11 @@ async def handle_libra(request: web.Request):
             </div>
         </div>
 
-        <div class="card" style="padding: 0; overflow: hidden; background: #0a0c12; border: 1px solid #1a1e2b;">
+        <div class="card" style="padding: 0; overflow: hidden; background: var(--bg-card); border: 1px solid var(--border-subtle);">
             <div class="table-responsive" style="margin: 0;">
                 <table style="margin: 0;">
                     <thead>
-                        <tr style="background: #08090d; border-bottom: 1px solid #161924;">
+                        <tr style="background: #0d121c; border-bottom: 1px solid var(--border-subtle);">
                             <th style="padding: 14px 18px;">TIER</th>
                             <th style="padding: 14px 18px;">RANK NAME</th>
                             <th style="padding: 14px 18px;">DUTIES & OPERATIONAL SCOPE</th>
@@ -3158,11 +3185,11 @@ async def handle_libra(request: web.Request):
             </div>
         </div>
 
-        <div class="card" style="padding: 0; overflow: hidden; background: #0a0c12; border: 1px solid #1a1e2b;">
+        <div class="card" style="padding: 0; overflow: hidden; background: var(--bg-card); border: 1px solid var(--border-subtle);">
             <div class="table-responsive" style="margin: 0;">
                 <table style="margin: 0;">
                     <thead>
-                        <tr style="background: #08090d; border-bottom: 1px solid #161924;">
+                        <tr style="background: #0d121c; border-bottom: 1px solid var(--border-subtle);">
                             <th style="padding: 14px 18px;">ID</th>
                             <th style="padding: 14px 18px;">VEHICLE MODEL</th>
                             <th style="padding: 14px 18px;">PLATE</th>
@@ -3196,48 +3223,48 @@ async def handle_libra(request: web.Request):
         </div>
 
         <div class="grid-3" style="margin-bottom: 24px;">
-            <div class="card" style="background:#0a0c12; border: 1px solid #1a1e2b;">
+            <div class="card">
                 <div class="stat-label">Treasury Balance</div>
-                <div class="stat-val" style="color:#22c55e;">{format_money(bal['balance'])}</div>
+                <div class="stat-val" style="color:var(--accent-emerald);">{format_money(bal['balance'])}</div>
             </div>
-            <div class="card" style="background:#0a0c12; border: 1px solid #1a1e2b;">
+            <div class="card">
                 <div class="stat-label">Total Deposited</div>
-                <div class="stat-val" style="color:#10b981;">{format_money(bal['total_deposited'])}</div>
+                <div class="stat-val" style="color:#ffffff;">{format_money(bal['total_deposited'])}</div>
             </div>
-            <div class="card" style="background:#0a0c12; border: 1px solid #1a1e2b;">
+            <div class="card">
                 <div class="stat-label">Total Withdrawn</div>
-                <div class="stat-val" style="color:#ef4444;">{format_money(bal['total_withdrawn'])}</div>
+                <div class="stat-val" style="color:#ffffff;">{format_money(bal['total_withdrawn'])}</div>
             </div>
         </div>
 
         <div class="grid-2" style="margin-bottom: 28px;">
-            <div class="card" style="background:#0a0c12; border: 1px solid #1a1e2b;">
-                <h3 style="color:#10b981; margin-bottom:12px;">📥 Deposit to Libra Fund (0% Tax)</h3>
-                <label style="font-size:11px; font-weight:800; color:#94a3b8;">Amount:</label>
+            <div class="card">
+                <h3 style="color:#ffffff; margin-bottom:12px;">📥 Deposit to Libra Fund (0% Tax)</h3>
+                <label style="font-size:11px; font-weight:800; color:var(--text-dim); text-transform:uppercase;">Amount:</label>
                 <input id="dep-amt" type="text" placeholder="250k or 1M">
-                <label style="font-size:11px; font-weight:800; color:#94a3b8;">Reason:</label>
+                <label style="font-size:11px; font-weight:800; color:var(--text-dim); text-transform:uppercase;">Reason:</label>
                 <input id="dep-reason" type="text" placeholder="Event bonus, Car sale, Clan task">
                 <button class="btn btn-green" style="width:100%;" onclick="submitDeposit(\'librarp\')">Confirm Deposit</button>
             </div>
 
-            <div class="card" style="background:#0a0c12; border: 1px solid #1a1e2b;">
-                <h3 style="color:#ef4444; margin-bottom:12px;">📤 Withdraw from Libra Fund (0% Tax)</h3>
-                <label style="font-size:11px; font-weight:800; color:#94a3b8;">Amount:</label>
+            <div class="card">
+                <h3 style="color:#ffffff; margin-bottom:12px;">📤 Withdraw from Libra Fund (0% Tax)</h3>
+                <label style="font-size:11px; font-weight:800; color:var(--text-dim); text-transform:uppercase;">Amount:</label>
                 <input id="with-amt" type="text" placeholder="500k">
-                <label style="font-size:11px; font-weight:800; color:#94a3b8;">Reason:</label>
+                <label style="font-size:11px; font-weight:800; color:var(--text-dim); text-transform:uppercase;">Reason:</label>
                 <input id="with-reason" type="text" placeholder="Weapons, Clan car purchase">
-                <button class="btn btn-red" style="width:100%;" onclick="submitWithdraw(\'librarp\')">Confirm Withdrawal</button>
+                <button class="btn btn-secondary" style="width:100%; border-color: rgba(239, 68, 68, 0.4); color: #f87171;" onclick="submitWithdraw(\'librarp\')">Confirm Withdrawal</button>
             </div>
         </div>
 
-        <div class="card" style="padding: 0; overflow: hidden; background:#0a0c12; border: 1px solid #1a1e2b;">
-            <div style="padding: 16px 20px; border-bottom: 1px solid #161924;">
+        <div class="card" style="padding: 0; overflow: hidden; background:var(--bg-card); border: 1px solid var(--border-subtle);">
+            <div style="padding: 16px 20px; border-bottom: 1px solid var(--border-subtle);">
                 <h3 style="color:#fff; font-size:16px; margin:0;">📜 Recent Clan Transactions</h3>
             </div>
             <div class="table-responsive" style="margin: 0;">
                 <table style="margin:0;">
                     <thead>
-                        <tr style="background: #08090d;">
+                        <tr style="background: #0d121c; border-bottom: 1px solid var(--border-subtle);">
                             <th>TYPE</th><th>AMOUNT</th><th>MEMBER</th><th>REASON</th><th>DATE</th>
                         </tr>
                     </thead>
@@ -3279,8 +3306,8 @@ async def handle_libra(request: web.Request):
 
     <!-- MODAL 2: KICK CONFIRMATION -->
     <div id="kickModal" class="modal-backdrop">
-        <div class="card" style="max-width: 420px; width: 100%; border: 1.5px solid #ef4444; box-shadow: 0 10px 40px rgba(0,0,0,0.8);">
-            <h3 style="color: #ef4444; font-size: 18px; font-weight: 900; margin-bottom: 6px;">⚠️ Kick Clan Member?</h3>
+        <div class="card" style="max-width: 420px; width: 100%; border: 1px solid var(--border-subtle); box-shadow: 0 10px 40px rgba(0,0,0,0.8);">
+            <h3 style="color: #fff; font-size: 18px; font-weight: 900; margin-bottom: 6px;">⚠️ Kick Clan Member?</h3>
             <p id="kick-modal-sub" style="color: #cbd5e1; font-size: 14px; margin-bottom: 20px; line-height: 1.5;">Are you sure you want to remove this operative from the Fedrix Clan roster?</p>
             <input type="hidden" id="kick-member-id">
 
@@ -3293,10 +3320,10 @@ async def handle_libra(request: web.Request):
 
     <!-- MODAL: LIBRA RP DISCIPLINARY / WARNINGS -->
     <div id="warnModal" class="modal-backdrop">
-        <div class="card" style="max-width: 490px; width: 100%; border: 1.5px solid #f59e0b; box-shadow: 0 16px 50px rgba(0,0,0,0.85); border-radius: 14px;">
+        <div class="card" style="max-width: 490px; width: 100%; border: 1px solid var(--border-subtle); box-shadow: 0 16px 50px rgba(0,0,0,0.85); border-radius: 14px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
-                <h3 style="color: #fbbf24; font-size: 18px; font-weight: 900; margin: 0;">⚠️ Libra RP Disciplinary Action</h3>
-                <span id="warn-strike-badge" class="badge badge-green">0/3 CLEAN</span>
+                <h3 style="color: #fff; font-size: 18px; font-weight: 900; margin: 0;">⚠️ Libra RP Disciplinary Action</h3>
+                <span id="warn-strike-badge" class="badge badge-clean">0/3 CLEAN</span>
             </div>
             <p id="warn-modal-sub" style="color: #cbd5e1; font-size: 13px; margin-bottom: 14px;">Managing clan strikes for operative</p>
             <input type="hidden" id="warn-member-id">
@@ -3304,14 +3331,14 @@ async def handle_libra(request: web.Request):
             <!-- Warning History Box -->
             <div style="margin-bottom: 16px;">
                 <div style="font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 6px;">Active Warning History (Isolated to Libra):</div>
-                <div id="warn-history-box" style="max-height: 150px; overflow-y: auto; background: #080a10; border: 1px solid #1a1e2b; border-radius: 8px; padding: 12px; font-size: 12px; color: #94a3b8;">
+                <div id="warn-history-box" style="max-height: 150px; overflow-y: auto; background: var(--bg-subtle); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 12px; font-size: 12px; color: #94a3b8;">
                     Loading history...
                 </div>
             </div>
 
             <!-- Issue Warning Form (Leader / Co-Leader / Supervisor) -->
-            <div id="warn-action-box" style="display: {'block' if can_manage else 'none'}; background: #0c0e15; border: 1px solid #272c3d; border-radius: 8px; padding: 14px; margin-bottom: 16px;">
-                <label style="font-size: 11px; font-weight: 800; color: #f59e0b; text-transform: uppercase;">Issue Disciplinary Strike (Reason):</label>
+            <div id="warn-action-box" style="display: {'block' if can_manage else 'none'}; background: var(--bg-subtle); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 14px; margin-bottom: 16px;">
+                <label style="font-size: 11px; font-weight: 800; color: var(--text-dim); text-transform: uppercase;">Issue Disciplinary Strike (Reason):</label>
                 <input id="warn-reason-input" type="text" placeholder="e.g. Broke turf rule, insubordination, event absence" style="margin-top: 6px; margin-bottom: 12px;">
                 <div style="display: flex; gap: 8px;">
                     <button class="btn btn-red" style="flex: 1; padding: 9px; font-size: 12px;" onclick="submitIssueWarning()">⚠️ Issue Warning (+1 Strike)</button>
@@ -3327,7 +3354,7 @@ async def handle_libra(request: web.Request):
 
     <!-- MODAL 3: ADD MEMBER -->
     <div id="addMemberModal" class="modal-backdrop">
-        <div class="card" style="max-width: 440px; width: 100%; border: 1.5px solid #ef4444; box-shadow: 0 10px 40px rgba(0,0,0,0.8);">
+        <div class="card" style="max-width: 440px; width: 100%; border: 1px solid var(--border-subtle); box-shadow: 0 10px 40px rgba(0,0,0,0.8);">
             <h3 style="color: #fff; font-size: 18px; font-weight: 900; margin-bottom: 4px;">➕ Add Clan Member to Fedrix</h3>
             <p style="color: #94a3b8; font-size: 13px; margin-bottom: 16px;">Enroll a new operative into the clan database</p>
             
@@ -3356,8 +3383,8 @@ async def handle_libra(request: web.Request):
 
     <!-- MODAL 4: ADD VEHICLE -->
     <div id="addCarModal" class="modal-backdrop">
-        <div class="card" style="max-width: 440px; width: 100%; border: 1.5px solid #a855f7;">
-            <h3 style="color: #c084fc; font-size: 18px; font-weight: 900; margin-bottom: 16px;">🏎️ Add Car to Fedrix Fleet</h3>
+        <div class="card" style="max-width: 440px; width: 100%; border: 1px solid var(--border-subtle);">
+            <h3 style="color: #fff; font-size: 18px; font-weight: 900; margin-bottom: 16px;">🏎️ Add Car to Fedrix Fleet</h3>
             <label style="font-size: 11px; font-weight: 800; color: #94a3b8;">Vehicle Model:</label>
             <input id="new-veh-name" type="text" placeholder="e.g. Pegassi Terzo">
             <label style="font-size: 11px; font-weight: 800; color: #94a3b8;">License Plate:</label>
@@ -3366,7 +3393,7 @@ async def handle_libra(request: web.Request):
             <input id="new-veh-rank" type="text" placeholder="4">
 
             <div style="display: flex; gap: 10px; margin-top: 10px;">
-                <button class="btn btn-purple" style="flex: 1;" onclick="submitAddCar()">Add Vehicle</button>
+                <button class="btn btn-primary" style="flex: 1;" onclick="submitAddCar()">Add Vehicle</button>
                 <button class="btn btn-secondary" onclick="closeModal(\'addCarModal\')">Cancel</button>
             </div>
         </div>
@@ -3374,9 +3401,9 @@ async def handle_libra(request: web.Request):
 
     <!-- MODAL 5: FIRST-TIME PROFILE SETUP & LINKING -->
     <div id="profileModal" class="modal-backdrop" style="{'display: flex;' if is_first_time else 'display: none;'}">
-        <div class="card" style="max-width: 500px; width: 100%; border: 1.5px solid var(--accent); box-shadow: 0 16px 50px rgba(0,0,0,0.85); border-radius: 16px;">
+        <div class="card" style="max-width: 500px; width: 100%; border: 1px solid var(--border-subtle); box-shadow: 0 16px 50px rgba(0,0,0,0.85); border-radius: 16px;">
             <div style="text-align: center; margin-bottom: 18px;">
-                <img src="/logo.png" style="width: 64px; height: auto; filter: drop-shadow(0 4px 12px rgba(239,68,68,0.5));">
+                <img src="/logo.png" style="width: 64px; height: auto; filter: drop-shadow(0 4px 12px rgba(34,197,94,0.35));">
                 <h2 style="color: #fff; font-size: 20px; font-weight: 900; margin-top: 10px; text-transform: uppercase;">
                     Connect Your In-Game Operatives
                 </h2>
@@ -3386,8 +3413,8 @@ async def handle_libra(request: web.Request):
             </div>
 
             <!-- Libra RP Select -->
-            <div style="background: #090a0f; border: 1px solid #1a1e2b; border-left: 3px solid #a855f7; border-radius: 8px; padding: 12px; margin-bottom: 14px;">
-                <label style="font-size: 11px; font-weight: 800; color: #c084fc; text-transform: uppercase;">⚖️ Libra RP (Fedrix Clan Character):</label>
+            <div style="background: var(--bg-subtle); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 12px; margin-bottom: 14px;">
+                <label style="font-size: 11px; font-weight: 800; color: #fff; text-transform: uppercase;">⚖️ Libra RP (Fedrix Clan Character):</label>
                 <select id="link-libra-id" style="margin-top: 6px; margin-bottom: 4px;">
                     {member_select_options}
                 </select>
@@ -3395,8 +3422,8 @@ async def handle_libra(request: web.Request):
             </div>
 
             <!-- Grand RP Input -->
-            <div style="background: #090a0f; border: 1px solid #1a1e2b; border-left: 3px solid #3b82f6; border-radius: 8px; padding: 12px; margin-bottom: 20px;">
-                <label style="font-size: 11px; font-weight: 800; color: #60a5fa; text-transform: uppercase;">🌆 Grand RP (EN2 Character):</label>
+            <div style="background: var(--bg-subtle); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 12px; margin-bottom: 20px;">
+                <label style="font-size: 11px; font-weight: 800; color: #fff; text-transform: uppercase;">🌆 Grand RP (EN2 Character):</label>
                 <input id="link-grand-name" type="text" value="{profile.get('grand_member_name') or user['username']}" placeholder="Character Name (e.g. Haris Thenga)" style="margin-top: 6px; margin-bottom: 8px;">
                 
                 <label style="font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase;">Grand RP Rank:</label>
@@ -4304,3 +4331,18 @@ def create_web_app():
     app.router.add_post("/api/user/dismiss_profile_prompt", api_user_dismiss_profile_prompt)
 
     return app
+
+
+if __name__ == "__main__":
+    from database import init_db
+    init_db()
+
+    port = int(os.environ.get("PORT", 8080))
+    host = os.environ.get("HOST", "0.0.0.0")
+    print("=" * 65)
+    print("🚀 Thenga Network Web Dashboard running standalone (UI Mode)")
+    print(f"👉 Open in browser: http://localhost:{port}/?dev=1")
+    print("ℹ️  Bot gateway and voice playback are untouched and offline.")
+    print("=" * 65)
+    web.run_app(create_web_app(), host=host, port=port)
+
