@@ -25,7 +25,7 @@ def init_db():
     )
     """)
 
-    # Seed initial balances for GrandRP and LibraRP if not present
+    # Seed initial balances
     cursor.execute("INSERT OR IGNORE INTO bank_balances (server, balance, total_deposited, total_withdrawn, total_tax_paid) VALUES ('grandrp', 28454644.0, 0.0, 0.0, 0.0)")
     cursor.execute("INSERT OR IGNORE INTO bank_balances (server, balance, total_deposited, total_withdrawn, total_tax_paid) VALUES ('librarp', 2189500.0, 0.0, 0.0, 0.0)")
 
@@ -46,22 +46,7 @@ def init_db():
     )
     """)
 
-    # 3. Bank Loans
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS bank_loans (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        server TEXT NOT NULL,
-        user_id INTEGER NOT NULL,
-        user_name TEXT NOT NULL,
-        amount REAL NOT NULL,
-        repaid_amount REAL DEFAULT 0.0,
-        terms TEXT,
-        status TEXT DEFAULT 'ACTIVE', -- 'ACTIVE' or 'REPAID'
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-    """)
-
-    # 4. Family Vehicles & Insurance Expiry
+    # 3. Family Vehicles & Insurance Expiry
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS vehicles (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -74,11 +59,11 @@ def init_db():
     )
     """)
 
-    # Check vehicle count and seed if empty
+    # Seed initial vehicles if table is empty
     vehicle_count = cursor.execute("SELECT COUNT(*) FROM vehicles").fetchone()[0]
     if vehicle_count == 0:
         initial_fleet = [
-            # Screenshot 1
+            # Grand RP (EN2)
             ('grandrp', 'Coil Aleron Cabrio', '5JCS268', 'GrandRP Garage', 'superjedi'),
             ('grandrp', 'Ubermacht Arclight R', '1MIP449', 'GrandRP Garage', 'superjedi'),
             ('grandrp', 'Granger', '1ALG256', 'GrandRP Garage', 'superjedi'),
@@ -91,8 +76,6 @@ def init_db():
             ('grandrp', 'Declasse Vigero ZX', None, 'GrandRP Garage', 'superjedi'),
             ('grandrp', 'Obey Sirocco V6', None, 'GrandRP Garage', 'superjedi'),
             ('grandrp', 'Declasse Aurelia Touring', None, 'GrandRP Garage', 'superjedi'),
-
-            # Screenshot 2
             ('grandrp', 'Ubermacht Apex R-Spec', '6VYI947', 'GrandRP Garage', 'superjedi'),
             ('grandrp', 'Obey Sirocco V6', None, 'GrandRP Garage', 'superjedi'),
             ('grandrp', 'Bodhi', None, 'Family Truck', 'superjedi'),
@@ -105,8 +88,6 @@ def init_db():
             ('grandrp', 'Ubermacht Revenant Touring', '0JED107', 'Custom Jedi Plate', 'superjedi'),
             ('grandrp', 'Progen Helix Roadster', '0JED100', 'Custom Jedi Plate', 'superjedi'),
             ('grandrp', 'Bodhi', '4FYR239', 'Family Truck', 'superjedi'),
-
-            # Screenshot 3
             ('grandrp', 'Bodhi', '9QEW655', 'Family Truck', 'superjedi'),
             ('grandrp', 'Bodhi', '2UJU654', 'Family Truck', 'superjedi'),
             ('grandrp', 'Bodhi', '8KGF153', 'Family Truck', 'superjedi'),
@@ -146,7 +127,7 @@ def init_db():
         VALUES (?, ?, ?, NULL, ?, ?)
         """, initial_fleet)
 
-    # 5. Plantation (GrandRP Pineapple)
+    # 4. Plantation (GrandRP Pineapple)
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS plantation (
         id INTEGER PRIMARY KEY,
@@ -162,16 +143,15 @@ def init_db():
         last_notified_harvest INTEGER DEFAULT 0
     )
     """)
-    # Seed single plantation row
     cursor.execute("INSERT OR IGNORE INTO plantation (id, server, crop, status) VALUES (1, 'grandrp', 'Pineapple', 'IDLE')")
 
-    # 6. Event Alert System (LibraRP & GrandRP)
+    # 5. Event Alert System (LibraRP)
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS events (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         server TEXT DEFAULT 'librarp',
         name TEXT NOT NULL,
-        time_utc TEXT NOT NULL, -- e.g. '18:30' (HH:MM in UTC)
+        time_utc TEXT NOT NULL,
         description TEXT,
         role_id INTEGER,
         channel_id INTEGER,
@@ -180,7 +160,6 @@ def init_db():
     )
     """)
 
-    # Seed Libra RP Events if table is empty
     event_count = cursor.execute("SELECT COUNT(*) FROM events").fetchone()[0]
     if event_count == 0:
         cursor.execute("""
@@ -223,7 +202,6 @@ def record_bank_transaction(server: str, user_id: int, user_name: str, tx_type: 
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (server.lower(), user_id, user_name, tx_type, gross, tax, net, reason, proof_url))
 
-    # Update balance totals
     if tx_type == "deposit":
         cursor.execute("""
         UPDATE bank_balances
@@ -244,48 +222,13 @@ def record_bank_transaction(server: str, user_id: int, user_name: str, tx_type: 
     conn.commit()
     conn.close()
 
-def get_recent_transactions(server: str, limit: int = 5) -> List[Dict[str, Any]]:
+def get_recent_transactions(server: str, limit: int = 50) -> List[Dict[str, Any]]:
     conn = get_connection()
     rows = conn.execute("""
     SELECT * FROM bank_transactions WHERE server = ? ORDER BY id DESC LIMIT ?
     """, (server.lower(), limit)).fetchall()
     conn.close()
     return [dict(r) for r in rows]
-
-def create_loan(server: str, user_id: int, user_name: str, amount: float, terms: str):
-    conn = get_connection()
-    conn.execute("""
-    INSERT INTO bank_loans (server, user_id, user_name, amount, repaid_amount, terms, status)
-    VALUES (?, ?, ?, ?, 0.0, ?, 'ACTIVE')
-    """, (server.lower(), user_id, user_name, amount, terms))
-    conn.commit()
-    conn.close()
-
-def get_active_loans(server: str) -> List[Dict[str, Any]]:
-    conn = get_connection()
-    rows = conn.execute("""
-    SELECT * FROM bank_loans WHERE server = ? AND status = 'ACTIVE' ORDER BY id ASC
-    """, (server.lower(),)).fetchall()
-    conn.close()
-    return [dict(r) for r in rows]
-
-def repay_loan(loan_id: int, repay_amount: float) -> Optional[Dict[str, Any]]:
-    conn = get_connection()
-    row = conn.execute("SELECT * FROM bank_loans WHERE id = ?", (loan_id,)).fetchone()
-    if not row:
-        conn.close()
-        return None
-    
-    current_repaid = row["repaid_amount"] + repay_amount
-    new_status = 'REPAID' if current_repaid >= row["amount"] else 'ACTIVE'
-    
-    conn.execute("""
-    UPDATE bank_loans SET repaid_amount = ?, status = ? WHERE id = ?
-    """, (current_repaid, new_status, loan_id))
-    conn.commit()
-    updated = conn.execute("SELECT * FROM bank_loans WHERE id = ?", (loan_id,)).fetchone()
-    conn.close()
-    return dict(updated)
 
 # ==================== VEHICLE FUNCTIONS ====================
 
@@ -312,9 +255,8 @@ def get_vehicles(server: Optional[str] = None) -> List[Dict[str, Any]]:
 def renew_vehicle_insurance(identifier: str, new_expiry_dt: datetime) -> bool:
     conn = get_connection()
     cursor = conn.cursor()
-    clean_id = identifier.strip().upper()
+    clean_id = str(identifier).strip().upper()
 
-    # Check if identifier is numeric ID
     if clean_id.isdigit():
         cursor.execute("UPDATE vehicles SET insurance_expiry = ? WHERE id = ?", (new_expiry_dt.isoformat(), int(clean_id)))
     else:
@@ -328,7 +270,7 @@ def renew_vehicle_insurance(identifier: str, new_expiry_dt: datetime) -> bool:
 def remove_vehicle(identifier: str) -> bool:
     conn = get_connection()
     cursor = conn.cursor()
-    clean_id = identifier.strip().upper()
+    clean_id = str(identifier).strip().upper()
 
     if clean_id.isdigit():
         cursor.execute("DELETE FROM vehicles WHERE id = ?", (int(clean_id),))
@@ -340,7 +282,7 @@ def remove_vehicle(identifier: str) -> bool:
     conn.close()
     return affected
 
-# ==================== PLANTATION FUNCTIONS ====================
+# ==================== PLANTATION FUNCTIONS (GRAND RP) ====================
 
 def get_plantation_state() -> Dict[str, Any]:
     conn = get_connection()
@@ -400,7 +342,7 @@ def mark_plantation_notified(field: str):
     conn.commit()
     conn.close()
 
-# ==================== EVENT FUNCTIONS ====================
+# ==================== EVENT FUNCTIONS (LIBRA RP) ====================
 
 def add_event(server: str, name: str, time_utc: str, description: str, role_id: Optional[int], channel_id: int):
     conn = get_connection()
