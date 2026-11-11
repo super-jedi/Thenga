@@ -17,7 +17,6 @@ class GrandRPCog(commands.Cog, name="Grand RP (EN2)"):
     grand_group = app_commands.Group(name="grand", description="Grand RP (EN2) Family Management")
     bank_group = app_commands.Group(name="bank", description="Grand RP Family Fund", parent=grand_group)
     vehicle_group = app_commands.Group(name="vehicle", description="Grand RP Vehicle Fleet", parent=grand_group)
-    plantation_group = app_commands.Group(name="plantation", description="Grand RP Pineapple Plantation", parent=grand_group)
 
     # ==================== BANK COMMANDS (GRAND RP) ====================
     @bank_group.command(name="deposit", description="Deposit cash into Grand RP Family Account (3% tax).")
@@ -126,21 +125,6 @@ class GrandRPCog(commands.Cog, name="Grand RP (EN2)"):
         embed.set_footer(text="Grand RP Rules: 3% Deposit Tax / 5% Withdrawal Tax")
         await interaction.followup.send(embed=embed)
 
-    @bank_group.command(name="set_balance", description="[Admin Only] Manually sync Grand RP balance with in-game fund.")
-    @app_commands.describe(amount="New balance amount (e.g. 28454644, 28.5M)")
-    async def bank_set_balance(self, interaction: discord.Interaction, amount: str):
-        if not interaction.user.guild_permissions.administrator and interaction.user.id != interaction.guild.owner_id:
-            await interaction.response.send_message("❌ Admin/Owner only.", ephemeral=True)
-            return
-        await interaction.response.defer()
-        try:
-            new_bal = parse_amount(amount)
-        except ValueError as e:
-            await interaction.followup.send(f"❌ {e}")
-            return
-        db.set_bank_balance("grandrp", new_bal)
-        await interaction.followup.send(f"✅ Grand RP Family Balance updated to **{format_money(new_bal)}**.")
-
     # ==================== VEHICLE COMMANDS (GRAND RP) ====================
     @vehicle_group.command(name="list", description="List all Grand RP vehicles and insurance status.")
     @app_commands.describe(only_expired="Show only vehicles with expired insurance")
@@ -183,26 +167,6 @@ class GrandRPCog(commands.Cog, name="Grand RP (EN2)"):
         embed.set_footer(text="Use /grand vehicle renew [id or plate] [days] to update insurance")
         await interaction.followup.send(embed=embed)
 
-    @vehicle_group.command(name="add", description="Add a vehicle to Grand RP garage.")
-    @app_commands.describe(name="Vehicle model", plate="License plate (optional)", insurance_days="Days remaining (0 = Expired)", notes="Notes")
-    async def vehicle_add(self, interaction: discord.Interaction, name: str, plate: Optional[str] = None, insurance_days: int = 0, notes: str = ""):
-        await interaction.response.defer()
-        exp = datetime.now(timezone.utc) + timedelta(days=insurance_days) if insurance_days > 0 else None
-        db.add_vehicle("grandrp", name, plate, exp, notes, interaction.user.display_name)
-        status = "🔴 Expired" if not exp else f"🟢 Insured ({insurance_days}d)"
-        await interaction.followup.send(f"✅ Added **{name}** ({plate or 'No Plate'}) to Grand RP fleet — {status}.")
-
-    @vehicle_group.command(name="bulk_add", description="Add multiple Grand RP vehicles (e.g. 'Chiron | ABC, Toros | XYZ').")
-    async def vehicle_bulk_add(self, interaction: discord.Interaction, text: str):
-        await interaction.response.defer()
-        lines = [line.strip() for line in text.replace(",", "\n").split("\n") if line.strip()]
-        for line in lines:
-            parts = [p.strip() for p in line.split("|")] if "|" in line else [p.strip() for p in line.split("-")]
-            name = parts[0]
-            plate = parts[1] if len(parts) > 1 else None
-            db.add_vehicle("grandrp", name, plate, None, "Bulk added", interaction.user.display_name)
-        await interaction.followup.send(f"✅ Bulk added {len(lines)} vehicles to Grand RP fleet (all Expired).")
-
     @vehicle_group.command(name="renew", description="Renew vehicle insurance in Grand RP.")
     @app_commands.describe(identifier="License plate OR ID #", days="Days of insurance (default: 30)")
     async def vehicle_renew(self, interaction: discord.Interaction, identifier: str, days: int = 30):
@@ -224,72 +188,7 @@ class GrandRPCog(commands.Cog, name="Grand RP (EN2)"):
         else:
             await interaction.followup.send(f"❌ Vehicle `{identifier.upper()}` not found.")
 
-    # ==================== PLANTATION COMMANDS (GRAND RP EXCLUSIVE) ====================
-    @plantation_group.command(name="plant", description="Start Pineapple plantation cycle.")
-    @app_commands.describe(nourish_hours="Hours until nourish (default: 2.0)", harvest_hours="Total hours until harvest (default: 4.0)", alert_channel="Alert channel")
-    async def plant_pineapple(self, interaction: discord.Interaction, nourish_hours: float = 2.0, harvest_hours: float = 4.0, alert_channel: Optional[discord.TextChannel] = None):
-        await interaction.response.defer()
-        target_ch = alert_channel or interaction.channel
-        now = datetime.now(timezone.utc)
-        next_n = now + timedelta(hours=nourish_hours)
-        harv = now + timedelta(hours=harvest_hours)
-        db.set_plantation_planted(now, next_n, harv, target_ch.id)
-
-        embed = discord.Embed(title="🍍 Pineapple Plantation Planted!", color=discord.Color.green(), description=f"Planted by {interaction.user.mention}.")
-        embed.add_field(name="💧 Next Nourish", value=discord_timestamp(next_n, 'R'), inline=True)
-        embed.add_field(name="🌾 Harvest Ready", value=discord_timestamp(harv, 'R'), inline=True)
-        embed.add_field(name="📢 Alerts Channel", value=target_ch.mention, inline=False)
-        await interaction.followup.send(embed=embed)
-
-    @plantation_group.command(name="nourish", description="Log fertilization/watering and reset nourishment timer.")
-    @app_commands.describe(next_hours="Hours until next nourishment (default: 2.0)")
-    async def nourish_pineapple(self, interaction: discord.Interaction, next_hours: float = 2.0):
-        await interaction.response.defer()
-        state = db.get_plantation_state()
-        if state.get("status") != "GROWING":
-            await interaction.followup.send("⚠️ No active pineapple plantation growing. Run `/grand plantation plant` first.")
-            return
-        now = datetime.now(timezone.utc)
-        next_n = now + timedelta(hours=next_hours)
-        db.update_plantation_nourish(now, next_n)
-        await interaction.followup.send(f"💧 Pineapple nourished by {interaction.user.mention}! Next due: {discord_timestamp(next_n, 'R')}.")
-
-    @plantation_group.command(name="harvest", description="Collect pineapple harvest, log profit, and reset.")
-    @app_commands.describe(profit="Total cash collected (e.g. 123000, 150k)", add_to_bank="Auto-deposit to Grand RP Bank?")
-    async def harvest_pineapple(self, interaction: discord.Interaction, profit: str, add_to_bank: bool = True):
-        await interaction.response.defer()
-        try:
-            amt = parse_amount(profit)
-        except ValueError as e:
-            await interaction.followup.send(f"❌ {e}")
-            return
-        db.reset_plantation()
-        msg = f"🚜 Harvest collected by {interaction.user.mention}! Profit: **{format_money(amt)}**."
-        if add_to_bank:
-            tax = amt * 0.03
-            net = amt - tax
-            db.record_bank_transaction("grandrp", interaction.user.id, interaction.user.display_name, "deposit", amt, tax, net, "Pineapple Harvest Profit")
-            msg += f"\n🏦 Auto-deposited to Grand RP bank: **{format_money(net)}** (after 3% tax)."
-        await interaction.followup.send(msg)
-
-    @plantation_group.command(name="status", description="Check current status of the Grand RP Pineapple plantation.")
-    async def plantation_status(self, interaction: discord.Interaction):
-        await interaction.response.defer()
-        state = db.get_plantation_state()
-        status = state.get("status", "IDLE")
-        if status != "GROWING":
-            await interaction.followup.send("🌱 Grand RP Pineapple Plantation is currently **IDLE**. Use `/grand plantation plant` when ready.")
-            return
-
-        embed = discord.Embed(title="🍍 Grand RP Pineapple Plantation", color=discord.Color.green())
-        if state.get("next_nourish_due"):
-            n_dt = datetime.fromisoformat(state["next_nourish_due"])
-            embed.add_field(name="💧 Next Nourish", value=discord_timestamp(n_dt, 'R'), inline=True)
-        if state.get("harvest_due"):
-            h_dt = datetime.fromisoformat(state["harvest_due"])
-            embed.add_field(name="🌾 Harvest Ready", value=discord_timestamp(h_dt, 'R'), inline=True)
-        await interaction.followup.send(embed=embed)
-
+    # ==================== PLANTATION BACKGROUND TIMER ====================
     @tasks.loop(seconds=60)
     async def check_plantation_timer(self):
         try:
@@ -315,7 +214,7 @@ class GrandRPCog(commands.Cog, name="Grand RP (EN2)"):
                 harvest_dt = datetime.fromisoformat(state["harvest_due"])
                 if now >= harvest_dt:
                     db.mark_plantation_notified("last_notified_harvest")
-                    await channel.send("🍍🎉 @here **Pineapple Plantation Ready for Harvest!** Run `/grand plantation harvest`!")
+                    await channel.send("🍍🎉 @here **Pineapple Plantation Ready for Harvest!** Open the Dashboard to collect profit!")
         except Exception:
             pass
 

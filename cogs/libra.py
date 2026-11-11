@@ -121,21 +121,6 @@ class LibraRPCog(commands.Cog, name="Libra RP (Fedrix)"):
         embed.set_footer(text="Libra RP Rules: 0% Tax • Fedrix Family")
         await interaction.followup.send(embed=embed)
 
-    @bank_group.command(name="set_balance", description="[Admin Only] Manually sync Libra RP balance with in-game fund.")
-    @app_commands.describe(amount="New balance amount (e.g. 2189500, 2.5M)")
-    async def bank_set_balance(self, interaction: discord.Interaction, amount: str):
-        if not interaction.user.guild_permissions.administrator and interaction.user.id != interaction.guild.owner_id:
-            await interaction.response.send_message("❌ Admin/Owner only.", ephemeral=True)
-            return
-        await interaction.response.defer()
-        try:
-            new_bal = parse_amount(amount)
-        except ValueError as e:
-            await interaction.followup.send(f"❌ {e}")
-            return
-        db.set_bank_balance("librarp", new_bal)
-        await interaction.followup.send(f"✅ Libra RP Family Balance updated to **{format_money(new_bal)}**.")
-
     # ==================== VEHICLE COMMANDS (LIBRA RP) ====================
     @vehicle_group.command(name="list", description="List all Libra RP (Fedrix) vehicles and insurance status.")
     @app_commands.describe(only_expired="Show only vehicles with expired insurance")
@@ -186,17 +171,6 @@ class LibraRPCog(commands.Cog, name="Libra RP (Fedrix)"):
         db.add_vehicle("librarp", name, plate, exp, notes, interaction.user.display_name)
         status = "🔴 Expired" if not exp else f"🟢 Insured ({insurance_days}d)"
         await interaction.followup.send(f"✅ Added **{name}** ({plate or 'No Plate'}) to Libra RP fleet — {status}.")
-
-    @vehicle_group.command(name="bulk_add", description="Add multiple Libra RP vehicles.")
-    async def vehicle_bulk_add(self, interaction: discord.Interaction, text: str):
-        await interaction.response.defer()
-        lines = [line.strip() for line in text.replace(",", "\n").split("\n") if line.strip()]
-        for line in lines:
-            parts = [p.strip() for p in line.split("|")] if "|" in line else [p.strip() for p in line.split("-")]
-            name = parts[0]
-            plate = parts[1] if len(parts) > 1 else None
-            db.add_vehicle("librarp", name, plate, None, "Bulk added", interaction.user.display_name)
-        await interaction.followup.send(f"✅ Bulk added {len(lines)} vehicles to Libra RP fleet.")
 
     @vehicle_group.command(name="renew", description="Renew vehicle insurance in Libra RP.")
     @app_commands.describe(identifier="License plate OR ID #", days="Days of insurance (default: 30)")

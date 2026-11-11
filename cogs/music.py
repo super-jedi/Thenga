@@ -4,6 +4,8 @@ from discord.ext import commands
 import asyncio
 import yt_dlp
 import functools
+import os
+import time
 from typing import Optional, Dict, Any, List
 from collections import deque
 
@@ -39,6 +41,7 @@ class Track:
     def __init__(self, data: dict, requester: discord.Member):
         self.data = data
         self.requester = requester
+        self.id = data.get('id', str(int(time.time())))
         self.title = data.get('title', 'Unknown Title')
         self.webpage_url = data.get('webpage_url') or data.get('original_url') or data.get('url', '')
         self.headers = data.get('http_headers', {})
@@ -53,6 +56,7 @@ class Track:
         self.thumbnail = data.get('thumbnail', '')
         self.duration = data.get('duration', 0)
         self.uploader = data.get('uploader') or data.get('channel', 'Unknown Artist')
+        self.local_filepath: Optional[str] = None
 
     @property
     def formatted_duration(self) -> str:
@@ -79,6 +83,8 @@ class GuildPlayer:
 
     async def player_loop(self):
         await self.bot.wait_until_ready()
+        loop = asyncio.get_event_loop()
+
         while True:
             self.next_event.clear()
 
@@ -104,37 +110,68 @@ class GuildPlayer:
                 self.current = track
 
             try:
-                stream_url = track.stream_url
-                headers = getattr(track, 'headers', {})
+                # Local audio caching for 100% reliable VC playback without CDN throttling/silence
+                temp_dir = os.path.join(os.getcwd(), "temp_music")
+                os.makedirs(temp_dir, exist_ok=True)
 
-                # Only refresh if stream_url is missing
-                if not stream_url:
-                    loop = asyncio.get_event_loop()
-                    data = await loop.run_in_executor(
-                        None,
-                        functools.partial(ytdl.extract_info, track.webpage_url, download=False)
-                    )
-                    stream_url = data.get('url')
-                    if not stream_url and 'formats' in data:
-                        audio_formats = [f for f in data['formats'] if f.get('acodec') != 'none']
-                        if audio_formats:
-                            stream_url = audio_formats[-1].get('url')
-                        elif data['formats']:
-                            stream_url = data['formats'][-1].get('url')
-                    headers = data.get('http_headers', {})
+                track_id = track.id or str(abs(hash(track.title)))
+                existing = [os.path.join(temp_dir, f) for f in os.listdir(temp_dir) if f.startswith(f"{track_id}.")]
+                filepath = existing[0] if (existing and os.path.exists(existing[0])) else None
 
-                header_str = ''.join(f"{k}: {v}\r\n" for k, v in headers.items()) if headers else ""
-                before_opts = '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5'
-                if header_str:
-                    before_opts += f' -headers {repr(header_str)}'
+                if not filepath:
+                    outtmpl = os.path.join(temp_dir, f"{track_id}.%(ext)s")
+                    dl_opts = {
+                        'format': 'bestaudio/best',
+                        'outtmpl': outtmpl,
+                        'quiet': True,
+                        'no_warnings': True,
+                        'noplaylist': True,
+                        'cachedir': False,
+                        'js_runtimes': {'node': {}, 'deno': {}},
+                    }
+                    def _download():
+                        with yt_dlp.YoutubeDL(dl_opts) as ydl:
+                            target_url = track.webpage_url or f"https://www.youtube.com/watch?v={track_id}"
+                            inf = ydl.extract_info(target_url, download=True)
+                            if 'entries' in inf:
+                                inf = inf['entries'][0]
+                            return ydl.prepare_filename(inf)
 
-                print(f"[Music] Playing '{track.title}' in guild {self.guild_id} (volume: {self.volume})")
-                source = discord.FFmpegPCMAudio(stream_url, before_options=before_opts, options='-vn')
+                    try:
+                        dl_path = await loop.run_in_executor(None, _download)
+                        if os.path.exists(dl_path):
+                            filepath = dl_path
+                        else:
+                            matches = [os.path.join(temp_dir, f) for f in os.listdir(temp_dir) if f.startswith(f"{track_id}.")]
+                            if matches:
+                                filepath = matches[0]
+                    except Exception as dl_err:
+                        print(f"[Music] Local download fallback error for '{track.title}': {dl_err}")
+
+                track.local_filepath = filepath
+
+                if filepath and os.path.exists(filepath):
+                    print(f"[Music] Playing cached '{track.title}' ({os.path.getsize(filepath)} bytes) in guild {self.guild_id} (volume: {self.volume})")
+                    source = discord.FFmpegPCMAudio(filepath, options='-vn')
+                elif track.stream_url:
+                    print(f"[Music] Playing stream '{track.title}' in guild {self.guild_id} (volume: {self.volume})")
+                    before_opts = '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5'
+                    source = discord.FFmpegPCMAudio(track.stream_url, before_options=before_opts, options='-vn')
+                else:
+                    print(f"[Music] No playable audio source found for '{track.title}'")
+                    self.next_event.set()
+                    continue
+
                 transformed_source = discord.PCMVolumeTransformer(source, volume=self.volume)
 
                 def after_playing(err):
                     if err:
                         print(f"[Player Error] in guild {self.guild_id}: {err}")
+                    if filepath and os.path.exists(filepath) and self.loop_mode != "song":
+                        try:
+                            os.remove(filepath)
+                        except Exception as ce:
+                            print(f"[Music Cleanup Error]: {ce}")
                     self.bot.loop.call_soon_threadsafe(self.next_event.set)
 
                 self.voice_client.play(transformed_source, after=after_playing)
@@ -153,6 +190,11 @@ class GuildPlayer:
 
     def stop(self):
         self.queue.clear()
+        if self.current and self.current.local_filepath and os.path.exists(self.current.local_filepath):
+            try:
+                os.remove(self.current.local_filepath)
+            except Exception:
+                pass
         self.current = None
         if self.voice_client and self.voice_client.is_playing():
             self.voice_client.stop()
@@ -165,6 +207,15 @@ class Music(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.players: Dict[int, GuildPlayer] = {}
+        # Clean temporary music cache on cog load
+        temp_dir = os.path.join(os.getcwd(), "temp_music")
+        if os.path.exists(temp_dir):
+            for f in os.listdir(temp_dir):
+                try:
+                    os.remove(os.path.join(temp_dir, f))
+                except Exception:
+                    pass
+        os.makedirs(temp_dir, exist_ok=True)
 
     def get_player(self, guild_id: int) -> GuildPlayer:
         if guild_id not in self.players:
