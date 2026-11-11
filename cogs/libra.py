@@ -3,7 +3,7 @@ from discord import app_commands
 from discord.ext import commands, tasks
 from datetime import datetime, timedelta, timezone
 from typing import Optional
-from utils import parse_amount, format_money, discord_timestamp
+from utils import parse_amount, format_money, discord_timestamp, is_admin_user
 import database as db
 
 class LibraRPCog(commands.Cog, name="Libra RP (Fedrix)"):
@@ -280,6 +280,203 @@ class LibraRPCog(commands.Cog, name="Libra RP (Fedrix)"):
         )
         await ch.send(content=role_ping, embed=embed)
         await interaction.followup.send("✅ Test alert sent!")
+
+    # ==================== CLAN WARNINGS & DISCIPLINARY SYSTEM ====================
+    def find_libra_target(self, identifier: str) -> Optional[dict]:
+        conn = db.get_connection()
+        clean = identifier.strip().replace("#", "")
+        if clean.isdigit():
+            m = conn.execute("SELECT * FROM libra_members WHERE id = ?", (int(clean),)).fetchone()
+            if m:
+                conn.close()
+                return dict(m)
+        query = f"%{identifier.strip().lower()}%"
+        m = conn.execute("SELECT * FROM libra_members WHERE LOWER(name) LIKE ? ORDER BY rank_level ASC LIMIT 1", (query,)).fetchone()
+        conn.close()
+        return dict(m) if m else None
+
+    def can_actor_manage(self, user: Any, target_level: int) -> tuple[bool, str]:
+        if is_admin_user(user):
+            return True, ""
+        
+        conn = db.get_connection()
+        uid = str(getattr(user, "id", ""))
+        row = conn.execute("SELECT rank_level, name FROM libra_members WHERE discord_id = ?", (uid,)).fetchone()
+        conn.close()
+        if not row:
+            return False, "❌ You do not have a linked Libra RP character with leadership authority."
+        
+        actor_level = row["rank_level"]
+        if actor_level not in [1, 2, 3]:
+            return False, f"❌ Disciplinary authority is restricted to Rank 1 (Leader), Rank 2 (Co-Leader), and Rank 3 (Supervisor). Your rank is Lv {actor_level} ({row['name']})."
+        
+        if actor_level >= target_level:
+            return False, f"❌ You cannot discipline an operative of equal or higher rank (Lv {target_level})."
+        
+        return True, ""
+
+    @libra_group.command(name="warn", description="Issue a Libra RP clan warning strike to a member.")
+    @app_commands.describe(
+        member="In-game character name or ID # (e.g. 5392 or Cameo)",
+        reason="Reason for the clan warning"
+    )
+    async def libra_warn(self, interaction: discord.Interaction, member: str, reason: str):
+        await interaction.response.defer()
+        target = self.find_libra_target(member)
+        if not target:
+            await interaction.followup.send(f"❌ Member `{member}` not found in Libra RP Fedrix roster.")
+            return
+        
+        allowed, err_msg = self.can_actor_manage(interaction.user, target["rank_level"])
+        if not allowed:
+            await interaction.followup.send(err_msg)
+            return
+        
+        res = db.add_libra_warning(target["id"], reason, issued_by=interaction.user.display_name)
+        if not res.get("success"):
+            await interaction.followup.send(f"❌ Failed to issue warning: {res.get('error')}")
+            return
+        
+        strike = res["strike_number"]
+        color = discord.Color.gold() if strike == 1 else (discord.Color.orange() if strike == 2 else discord.Color.red())
+        
+        embed = discord.Embed(
+            title="⚠️ LIBRA RP (FEDRIX) DISCIPLINARY STRIKE",
+            color=color,
+            timestamp=discord.utils.utcnow()
+        )
+        embed.add_field(name="Operative", value=f"**{target['name']}** (`ID #{target['id']}`)", inline=True)
+        embed.add_field(name="Clan Rank", value=f"Lv {target['rank_level']} {target['rank_name']}", inline=True)
+        embed.add_field(name="Strike Count", value=f"**{strike} / 3 Strikes**", inline=True)
+        embed.add_field(name="Disciplinary Reason", value=reason, inline=False)
+        embed.add_field(name="Issued By", value=interaction.user.mention, inline=False)
+        
+        if strike >= 3:
+            embed.add_field(
+                name="🚨 ACTION REQUIRED",
+                value="Operative has accumulated **3 strikes**. Immediate suspension or clan expulsion is recommended.",
+                inline=False
+            )
+        embed.set_footer(text="Fedrix Clan Disciplinary System • Isolated from Grand RP & Discord")
+        
+        # DM member if linked
+        if target.get("discord_id"):
+            try:
+                user_obj = await self.bot.fetch_user(int(target["discord_id"]))
+                if user_obj:
+                    await user_obj.send(f"⚠️ **LIBRA RP CLAN DISCIPLINARY NOTICE**\nYou have received Strike #{strike}/3 in Fedrix Clan.\n**Reason:** {reason}\n**Issued By:** {interaction.user.display_name}")
+            except Exception:
+                pass
+        
+        await interaction.followup.send(embed=embed)
+
+    @libra_group.command(name="warnings", description="View active Libra RP clan warnings for an operative.")
+    @app_commands.describe(member="In-game character name or ID #")
+    async def libra_warnings(self, interaction: discord.Interaction, member: str):
+        await interaction.response.defer()
+        target = self.find_libra_target(member)
+        if not target:
+            await interaction.followup.send(f"❌ Member `{member}` not found in Libra RP Fedrix roster.")
+            return
+        
+        warns = db.get_libra_warnings(target["id"])
+        w_cnt = target.get("warnings") or 0
+        
+        embed = discord.Embed(
+            title=f"📜 Libra RP Disciplinary Record: {target['name']}",
+            color=discord.Color.red() if w_cnt >= 3 else (discord.Color.gold() if w_cnt > 0 else discord.Color.green()),
+            timestamp=discord.utils.utcnow()
+        )
+        embed.add_field(name="Operative", value=f"**{target['name']}** (`ID #{target['id']}`)", inline=True)
+        embed.add_field(name="Rank", value=f"Lv {target['rank_level']} {target['rank_name']}", inline=True)
+        embed.add_field(name="Strike Standing", value=f"**{w_cnt} / 3 Active Strikes**", inline=True)
+        
+        if not warns:
+            embed.description = "✅ **Clean Record:** This operative has 0 active warnings or strikes."
+        else:
+            lines = []
+            for w in warns:
+                lines.append(f"• **Strike #{w['strike_number']}** ({w['created_at'][:10]}): {w['reason']} *(issued by {w['issued_by']})*")
+            embed.description = "\n".join(lines)
+        
+        embed.set_footer(text="Fedrix Clan Disciplinary Record")
+        await interaction.followup.send(embed=embed)
+
+    @libra_group.command(name="clearwarn", description="Clear all Libra RP warnings for an operative.")
+    @app_commands.describe(member="In-game character name or ID #")
+    async def libra_clearwarn(self, interaction: discord.Interaction, member: str):
+        await interaction.response.defer()
+        target = self.find_libra_target(member)
+        if not target:
+            await interaction.followup.send(f"❌ Member `{member}` not found.")
+            return
+        
+        # Only Rank 1 (Leader), Rank 2 (Co-Leader), or Bot Admin
+        conn = db.get_connection()
+        row = conn.execute("SELECT rank_level FROM libra_members WHERE discord_id = ?", (str(interaction.user.id),)).fetchone()
+        conn.close()
+        actor_lvl = row["rank_level"] if row else 99
+        
+        if not is_admin_user(interaction.user) and actor_lvl not in [1, 2]:
+            await interaction.followup.send("❌ Only Clan Leader (Lv 1), Co-Leader (Lv 2), or Bot Admins can clear disciplinary strikes.")
+            return
+        
+        db.clear_libra_warnings(target["id"])
+        
+        embed = discord.Embed(
+            title="✓ LIBRA RP DISCIPLINARY RECORD CLEARED",
+            color=discord.Color.green(),
+            description=f"All active warnings for **{target['name']}** (`ID #{target['id']}`) have been cleared.\nStanding restored to **0/3 Clean Record** by {interaction.user.mention}.",
+            timestamp=discord.utils.utcnow()
+        )
+        embed.set_footer(text="Fedrix Clan Disciplinary System")
+        await interaction.followup.send(embed=embed)
+
+    # Prefix command fallbacks
+    @commands.command(name="librawarn", aliases=["warnlibra", "lwarn"])
+    async def prefix_librawarn(self, ctx: commands.Context, member: str, *, reason: str = "Disciplinary violation"):
+        target = self.find_libra_target(member)
+        if not target:
+            await ctx.send(f"❌ Member `{member}` not found in Libra RP Fedrix roster.")
+            return
+        allowed, err_msg = self.can_actor_manage(ctx.author, target["rank_level"])
+        if not allowed:
+            await ctx.send(err_msg)
+            return
+        res = db.add_libra_warning(target["id"], reason, issued_by=ctx.author.display_name)
+        await ctx.send(f"⚠️ **Warning Issued:** {target['name']} (`ID #{target['id']}`) now has **{res['strike_number']}/3 Strikes**. Reason: *{reason}*")
+
+    @commands.command(name="librawarnings", aliases=["lwarns"])
+    async def prefix_librawarnings(self, ctx: commands.Context, member: str):
+        target = self.find_libra_target(member)
+        if not target:
+            await ctx.send(f"❌ Member `{member}` not found.")
+            return
+        warns = db.get_libra_warnings(target["id"])
+        w_cnt = target.get("warnings") or 0
+        if not warns:
+            await ctx.send(f"✅ **{target['name']}** has a clean record (0 active strikes).")
+        else:
+            msg = f"📜 **{target['name']}** (`ID #{target['id']}`) - **{w_cnt}/3 Active Strikes:**\n"
+            for w in warns:
+                msg += f"• Strike #{w['strike_number']}: {w['reason']} *(by {w['issued_by']})*\n"
+            await ctx.send(msg)
+
+    @commands.command(name="clearwarn", aliases=["lclearwarn"])
+    async def prefix_clearwarn(self, ctx: commands.Context, member: str):
+        target = self.find_libra_target(member)
+        if not target:
+            await ctx.send(f"❌ Member `{member}` not found.")
+            return
+        conn = db.get_connection()
+        row = conn.execute("SELECT rank_level FROM libra_members WHERE discord_id = ?", (str(ctx.author.id),)).fetchone()
+        conn.close()
+        actor_lvl = row["rank_level"] if row else 99
+        if not is_admin_user(ctx.author) and actor_lvl not in [1, 2]:
+            await ctx.send("❌ Only Clan Leader (Lv 1), Co-Leader (Lv 2), or Bot Admins can clear strikes.")
+            return
+        db.clear_libra_warnings(target["id"])
+        await ctx.send(f"✅ Disciplinary record cleared for **{target['name']}** (`ID #{target['id']}`). Restored to clean standing.")
 
     @tasks.loop(seconds=60)
     async def check_events(self):

@@ -401,7 +401,7 @@ async def handle_home(request: web.Request):
                             </div>
                         </div>
 
-                        <div class="hub-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <div class="hub-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
                             <!-- Grand RP Card -->
                             <a href="/grand" style="text-decoration: none; color: inherit;">
                                 <div class="card" style="cursor: pointer; transition: transform 0.2s, border-color 0.2s; border-color: #3b82f6; height: 100%; display: flex; flex-direction: column; justify-content: space-between;" onmouseover="this.style.transform='translateY(-4px)'" onmouseout="this.style.transform='none'">
@@ -461,6 +461,34 @@ async def handle_home(request: web.Request):
                                     </div>
                                 </div>
                             </a>
+
+                            <!-- Discord Management Card -->
+                            <div class="card" style="border-color: #5865F2; height: 100%; display: flex; flex-direction: column; justify-content: space-between; transition: transform 0.2s, border-color 0.2s;" onmouseover="this.style.transform='translateY(-4px)'" onmouseout="this.style.transform='none'">
+                                <div>
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                                        <span style="font-size: 32px;">🎮</span>
+                                        <span class="badge" style="background: rgba(88, 101, 242, 0.2); color: #818cf8; border: 1px solid #5865F2;">Active Server</span>
+                                    </div>
+                                    <h2 style="font-size: 24px; color: #818cf8; margin-bottom: 8px; font-weight: 900;">Discord Management</h2>
+                                    <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 20px;">
+                                        High Command Discord Operations, Clan Moderation, and Bot Infrastructure.
+                                    </p>
+                                </div>
+                                <div style="border-top: 1px solid var(--card-border); padding-top: 16px; display: flex; justify-content: space-between;">
+                                    <div>
+                                        <div class="stat-label">Bot Status</div>
+                                        <div style="font-weight: 800; color: #22c55e; font-size: 16px;">ONLINE</div>
+                                    </div>
+                                    <div>
+                                        <div class="stat-label">Disciplinary</div>
+                                        <div style="font-weight: 800; color: #f59e0b; font-size: 16px;">Isolated</div>
+                                    </div>
+                                    <div>
+                                        <div class="stat-label">Commands</div>
+                                        <div style="font-weight: 800; color: #818cf8; font-size: 16px;">/libra /grp</div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -991,10 +1019,6 @@ async def handle_libra(request: web.Request):
     # 1. Build Members Table Rows
     member_rows = ""
     for m in members:
-        is_on = bool(m.get("is_online"))
-        dot = '<span class="ingame-dot dot-online" title="Online"></span>' if is_on else '<span class="ingame-dot dot-offline" title="Offline"></span>'
-        last_seen_html = '<span style="color:#22c55e; font-weight:700;">Online now</span>' if is_on else f'<span style="color:#94a3b8;">{m.get("last_seen") or "Unknown"}</span>'
-        
         discord_badge = ""
         if m.get("discord_username"):
             discord_badge = f'<span class="badge" style="background:rgba(88,101,242,0.18); color:#818cf8; border:1px solid rgba(88,101,242,0.4); font-size:10px; margin-left:8px; padding:1px 6px;">@{m["discord_username"]}</span>'
@@ -1002,34 +1026,49 @@ async def handle_libra(request: web.Request):
         # Determine if viewer can manage this member (strictly higher rank or founder)
         can_edit_this = is_founder or db.user_can_manage_libra(user, m["rank_level"])
         
+        mid = m['id']
+        mlvl = m['rank_level']
+        mrname = m['rank_name']
+        safe_name = m['name'].replace("'", "\\'")
+        w_cnt = m.get('warnings') or 0
+
+        if w_cnt == 0:
+            warn_badge = f'<span class="badge badge-green" style="font-size:11px; cursor:pointer;" onclick="openWarnModal({mid}, \'{safe_name}\', {w_cnt})">0/3 CLEAN</span>'
+        elif w_cnt == 1:
+            warn_badge = f'<span class="badge" style="background:rgba(245,158,11,0.2); color:#fbbf24; border:1px solid #f59e0b; font-size:11px; cursor:pointer;" onclick="openWarnModal({mid}, \'{safe_name}\', {w_cnt})">⚠️ 1/3 WARN</span>'
+        elif w_cnt == 2:
+            warn_badge = f'<span class="badge" style="background:rgba(239,68,68,0.2); color:#f87171; border:1px solid #ef4444; font-size:11px; cursor:pointer;" onclick="openWarnModal({mid}, \'{safe_name}\', {w_cnt})">⚠️ 2/3 FINAL</span>'
+        else:
+            warn_badge = f'<span class="badge badge-red" style="font-size:11px; cursor:pointer;" onclick="openWarnModal({mid}, \'{safe_name}\', {w_cnt})">🚨 {w_cnt}/3 STRIKE</span>'
+
         actions_html = ""
         if can_edit_this:
-            safe_name = m['name'].replace("'", "\'")
             actions_html = f'''
-            <button class="ingame-btn-action" onclick="openRankModal({m['id']}, '{safe_name}', {m['rank_level']}, '{m['rank_name']}')">RANK</button>
-            <button class="ingame-btn-action btn-kick" onclick="openKickModal({m['id']}, '{safe_name}', {m['rank_level']})">KICK</button>
+            <button class="ingame-btn-action" onclick="openRankModal({mid}, '{safe_name}', {mlvl}, '{mrname}')">RANK</button>
+            <button class="ingame-btn-action btn-warn" onclick="openWarnModal({mid}, '{safe_name}', {w_cnt})">WARN</button>
+            <button class="ingame-btn-action btn-kick" onclick="openKickModal({mid}, '{safe_name}', {mlvl})">KICK</button>
             '''
         elif not m.get("discord_id") and is_first_time:
-            safe_name = m['name'].replace("'", "\'")
             actions_html = f'''
-            <button class="ingame-btn-claim" onclick="claimLibraProfile({m['id']}, '{safe_name}')">CLAIM</button>
+            <button class="ingame-btn-claim" onclick="claimLibraProfile({mid}, '{safe_name}')">CLAIM</button>
             '''
 
         member_rows += f'''
-        <tr class="member-row" data-id="{m['id']}" data-name="{m['name'].lower()}">
+        <tr class="member-row" data-id="{mid}" data-name="{m['name'].lower()}">
             <td>
                 <div style="display:flex; align-items:center;">
-                    {dot}
                     <span style="color:#fff; font-weight:700; font-size:15px;">{m['name']}</span>
-                    <span style="color:#64748b; font-size:12px; margin-left:6px; font-weight:600;">ID {m['id']}</span>
                     {discord_badge}
                 </div>
             </td>
             <td>
-                <span style="color:#94a3b8; font-size:13px; font-weight:700;">Lv {m['rank_level']}</span>
-                <span style="color:#ffffff; font-weight:800; font-size:14px; margin-left:6px;">{m['rank_name']}</span>
+                <code style="background:#0e111a; border:1px solid #232838; padding:3px 8px; border-radius:4px; color:#cbd5e1; font-weight:700; font-size:13px;">#{mid}</code>
             </td>
-            <td>{last_seen_html}</td>
+            <td>
+                <span style="color:#94a3b8; font-size:13px; font-weight:700;">Lv {mlvl}</span>
+                <span style="color:#ffffff; font-weight:800; font-size:14px; margin-left:6px;">{mrname}</span>
+            </td>
+            <td>{warn_badge}</td>
             <td style="text-align:right; white-space:nowrap;">{actions_html}</td>
         </tr>
         '''
@@ -1142,28 +1181,50 @@ async def handle_libra(request: web.Request):
         member_select_options += f'<option value="{mid}" {selected}>{mname} (ID {mid} • Lv {mlvl} {mrname}){suffix}</option>'
     member_select_options += '<option value="0">I am a new recruit / not on this roster</option>'
 
-        # 6. Extract Operative Dossier Profiles for Right Vertical Panel
+    # 6. Extract Operative Dossier Profiles for Right Vertical Panel
+    def render_award_text(val):
+        if not val or not str(val).strip():
+            return '<span style="color:#64748b; font-style:italic; font-weight:normal;">None</span>'
+        return f'<span style="color:#f59e0b; font-weight:700;">{str(val).strip()}</span>'
+
     libra_m = next((m for m in members if m['id'] == profile.get('libra_member_id') or m.get('discord_id') == str(user['id'])), None)
     libra_char_name = libra_m['name'] if libra_m else (profile.get('libra_member_name') or 'Operative')
     libra_char_id = str(libra_m['id']) if libra_m else (str(profile.get('libra_member_id')) if profile.get('libra_member_id') else '5392')
     libra_char_rank = f"Lv {libra_m['rank_level']} {libra_m['rank_name']}" if libra_m else profile.get('libra_rank', 'Lv 2 Co-Leader')
-    libra_act = profile.get('libra_recent_activity') or ('● Online now • Fedrix Clan Operations' if (libra_m and libra_m.get('is_online')) else 'Active clan operative')
-    libra_awards = profile.get('libra_awards') or '⚔️ Fedrix Vanguard Cross • 🏆 Master Turf Tactician'
-    libra_punishments = profile.get('libra_punishments') or 'Good Standing (0 Suspensions)'
+    libra_act = profile.get('libra_recent_activity') or 'Active clan operative'
+    libra_awards_display = render_award_text(profile.get('libra_awards'))
+    
+    if libra_m:
+        libra_w_cnt = libra_m.get('warnings') or 0
+        if libra_w_cnt == 0:
+            libra_punishments_display = '<span style="color:#22c55e; font-weight:700;">Clean Record (0 Active Warnings)</span>'
+        elif libra_w_cnt == 1:
+            libra_punishments_display = '<span style="color:#fbbf24; font-weight:700;">⚠️ 1/3 Active Warning</span>'
+        elif libra_w_cnt == 2:
+            libra_punishments_display = '<span style="color:#f87171; font-weight:700;">⚠️ 2/3 Final Warning</span>'
+        else:
+            libra_punishments_display = f'<span style="color:#ef4444; font-weight:700;">🚨 {libra_w_cnt}/3 Strike Action</span>'
+    else:
+        libra_punishments_display = '<span style="color:#22c55e; font-weight:700;">Clean Record (0 Active Warnings)</span>'
 
     grand_char_name = profile.get('grand_member_name') or user['username']
     grand_char_id = profile.get('grand_member_id') or '7104'
     grand_char_rank = profile.get('grand_rank') or 'Leader / Boss (Rank 10)'
     grand_act = profile.get('grand_recent_activity') or 'Pineapple Harvest Banked • Active Fleet Operative'
-    grand_awards = profile.get('grand_awards') or '🎖️ Malayali Club Honor Medal • 🌟 Top Plantation Tycoon'
+    grand_awards_display = render_award_text(profile.get('grand_awards'))
     grand_punishments = profile.get('grand_punishments') or 'Clean Record (0 Active Warnings)'
 
     discord_name = user['username']
     discord_id = str(user['id'])
     discord_rank = profile.get('discord_rank') or ('👑 Server Founder & Command Staff' if is_admin_user(user) else 'Verified Malayali Club Operative')
     discord_act = profile.get('discord_recent_activity') or 'Authenticated via Discord OAuth2 • Command Center Active'
-    discord_awards = profile.get('discord_awards') or '⭐ Server Creator • 🛡️ Bot Administrator'
+    discord_awards_display = render_award_text(profile.get('discord_awards'))
     discord_punishments = profile.get('discord_punishments') or 'Clean Record (0 Mutes / Warnings)'
+
+    # Edit buttons: Visible ONLY for Rank 1, 2, and 3 in Libra (or Founder)
+    grand_edit_btn = '<button class="dossier-edit-btn" onclick="openDossierModal(\'grand\')" title="Edit Grand RP Dossier">✏️ Edit</button>' if can_manage else ''
+    libra_edit_btn = '<button class="dossier-edit-btn" onclick="openDossierModal(\'libra\')" title="Edit Libra RP Dossier">✏️ Edit</button>' if can_manage else ''
+    discord_edit_btn = '<button class="dossier-edit-btn" onclick="openDossierModal(\'discord\')" title="Edit Discord Dossier">✏️ Edit</button>' if can_manage else ''
 
     total_m_count = len(members)
     online_m_count = sum(1 for m in members if m.get("is_online"))
@@ -1201,7 +1262,7 @@ async def handle_libra(request: web.Request):
                 .ingame-content {{
                     flex: 1;
                     padding: 28px 36px;
-                    max-width: 1350px;
+                    min-width: 0;
                     width: 100%;
                 }}
                 .ingame-group-title {{
@@ -1280,6 +1341,15 @@ async def handle_libra(request: web.Request):
                 .ingame-btn-action.btn-kick:hover {{
                     background: #b91c1c;
                 }}
+                .ingame-btn-action.btn-warn {{
+                    border-color: #f59e0b;
+                    color: #fbbf24;
+                }}
+                .ingame-btn-action.btn-warn:hover {{
+                    background: #f59e0b;
+                    color: #000;
+                    box-shadow: 0 0 10px rgba(245,158,11,0.5);
+                }}
                 .ingame-btn-claim {{
                     background: rgba(34, 197, 94, 0.15);
                     border: 1.5px solid #22c55e;
@@ -1351,7 +1421,7 @@ async def handle_libra(request: web.Request):
                 }}
                 
                 .ingame-dossier-panel {{
-                    width: 330px;
+                    width: 380px;
                     background: #090b10;
                     border-left: 1px solid #1a1e2b;
                     padding: 22px 18px;
@@ -1360,6 +1430,7 @@ async def handle_libra(request: web.Request):
                     gap: 16px;
                     flex-shrink: 0;
                     box-sizing: border-box;
+                    margin-left: auto;
                 }}
                 .dossier-card {{
                     background: #0c0e15;
@@ -1532,9 +1603,10 @@ async def handle_libra(request: web.Request):
                             <table style="margin: 0;">
                                 <thead>
                                     <tr style="background: #08090d; border-bottom: 1px solid #161924;">
-                                        <th style="padding: 14px 18px; color: #64748b; font-size: 11px;">STATUS / NAME</th>
+                                        <th style="padding: 14px 18px; color: #64748b; font-size: 11px;">NAME</th>
+                                        <th style="padding: 14px 18px; color: #64748b; font-size: 11px;">ID</th>
                                         <th style="padding: 14px 18px; color: #64748b; font-size: 11px;">RANK</th>
-                                        <th style="padding: 14px 18px; color: #64748b; font-size: 11px;">LAST SEEN</th>
+                                        <th style="padding: 14px 18px; color: #64748b; font-size: 11px;">WARNING STATUS</th>
                                         <th style="padding: 14px 18px; color: #64748b; font-size: 11px; text-align: right;">ACTIONS</th>
                                     </tr>
                                 </thead>
@@ -1680,7 +1752,7 @@ async def handle_libra(request: web.Request):
                                 <span style="font-size: 16px;">🌆</span>
                                 <span style="color: #60a5fa; font-weight: 900; font-size: 12px; letter-spacing: 0.8px; text-transform: uppercase;">GRAND RP (EN2)</span>
                             </div>
-                            <button class="dossier-edit-btn" onclick="openDossierModal('grand')" title="Edit Grand RP Dossier">✏️ Edit</button>
+                            {grand_edit_btn}
                         </div>
                         <div style="font-size: 16px; font-weight: 800; color: #fff; margin-top: 8px;">
                             {grand_char_name} <span style="font-size: 12px; color: #64748b; font-weight: 700;">#{grand_char_id}</span>
@@ -1693,7 +1765,7 @@ async def handle_libra(request: web.Request):
                         <div class="dossier-val" style="color: #cbd5e1;">{grand_act}</div>
 
                         <div class="dossier-label">MEDALS & AWARDS (BY LEADER)</div>
-                        <div class="dossier-val" style="color: #f59e0b; font-weight: 700;">{grand_awards}</div>
+                        <div class="dossier-val">{grand_awards_display}</div>
 
                         <div class="dossier-label">DISCIPLINARY RECORD</div>
                         <div class="dossier-val" style="color: #22c55e; font-weight: 700;">{grand_punishments}</div>
@@ -1706,7 +1778,7 @@ async def handle_libra(request: web.Request):
                                 <span style="font-size: 16px;">⚖️</span>
                                 <span style="color: #c084fc; font-weight: 900; font-size: 12px; letter-spacing: 0.8px; text-transform: uppercase;">LIBRA RP (FEDRIX)</span>
                             </div>
-                            <button class="dossier-edit-btn" onclick="openDossierModal('libra')" title="Edit Libra RP Dossier">✏️ Edit</button>
+                            {libra_edit_btn}
                         </div>
                         <div style="font-size: 16px; font-weight: 800; color: #fff; margin-top: 8px;">
                             {libra_char_name} <span style="font-size: 12px; color: #64748b; font-weight: 700;">ID #{libra_char_id}</span>
@@ -1719,10 +1791,10 @@ async def handle_libra(request: web.Request):
                         <div class="dossier-val" style="color: #cbd5e1;">{libra_act}</div>
 
                         <div class="dossier-label">MEDALS & AWARDS (BY LEADER)</div>
-                        <div class="dossier-val" style="color: #f59e0b; font-weight: 700;">{libra_awards}</div>
+                        <div class="dossier-val">{libra_awards_display}</div>
 
                         <div class="dossier-label">DISCIPLINARY RECORD</div>
-                        <div class="dossier-val" style="color: #22c55e; font-weight: 700;">{libra_punishments}</div>
+                        <div class="dossier-val">{libra_punishments_display}</div>
                     </div>
 
                     <!-- DIVISION 3: DISCORD DOSSIER -->
@@ -1732,7 +1804,7 @@ async def handle_libra(request: web.Request):
                                 <span style="font-size: 16px;">🎮</span>
                                 <span style="color: #818cf8; font-weight: 900; font-size: 12px; letter-spacing: 0.8px; text-transform: uppercase;">DISCORD DOSSIER</span>
                             </div>
-                            <button class="dossier-edit-btn" onclick="openDossierModal('discord')" title="Edit Discord Dossier">✏️ Edit</button>
+                            {discord_edit_btn}
                         </div>
                         <div style="display: flex; align-items: center; gap: 8px; margin-top: 8px;">
                             <img src="{user['avatar_url']}" style="width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid #5865F2;">
@@ -1749,7 +1821,7 @@ async def handle_libra(request: web.Request):
                         <div class="dossier-val" style="color: #cbd5e1;">{discord_act}</div>
 
                         <div class="dossier-label">SERVER RECOGNITIONS</div>
-                        <div class="dossier-val" style="color: #f59e0b; font-weight: 700;">{discord_awards}</div>
+                        <div class="dossier-val">{discord_awards_display}</div>
 
                         <div class="dossier-label">DISCIPLINARY RECORD</div>
                         <div class="dossier-val" style="color: #22c55e; font-weight: 700;">{discord_punishments}</div>
@@ -1795,6 +1867,40 @@ async def handle_libra(request: web.Request):
                     <div style="display: flex; gap: 10px;">
                         <button class="btn btn-red" style="flex: 1;" onclick="submitKick()">Confirm Kick</button>
                         <button class="btn btn-secondary" onclick="closeModal('kickModal')">Cancel</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODAL: LIBRA RP DISCIPLINARY / WARNINGS -->
+            <div id="warnModal" class="modal-backdrop">
+                <div class="card" style="max-width: 490px; width: 100%; border: 1.5px solid #f59e0b; box-shadow: 0 16px 50px rgba(0,0,0,0.85); border-radius: 14px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+                        <h3 style="color: #fbbf24; font-size: 18px; font-weight: 900; margin: 0;">⚠️ Libra RP Disciplinary Action</h3>
+                        <span id="warn-strike-badge" class="badge badge-green">0/3 CLEAN</span>
+                    </div>
+                    <p id="warn-modal-sub" style="color: #cbd5e1; font-size: 13px; margin-bottom: 14px;">Managing clan strikes for operative</p>
+                    <input type="hidden" id="warn-member-id">
+
+                    <!-- Warning History Box -->
+                    <div style="margin-bottom: 16px;">
+                        <div style="font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 6px;">Active Warning History (Isolated to Libra):</div>
+                        <div id="warn-history-box" style="max-height: 150px; overflow-y: auto; background: #080a10; border: 1px solid #1a1e2b; border-radius: 8px; padding: 12px; font-size: 12px; color: #94a3b8;">
+                            Loading history...
+                        </div>
+                    </div>
+
+                    <!-- Issue Warning Form (Leader / Co-Leader / Supervisor) -->
+                    <div id="warn-action-box" style="display: {'block' if can_manage else 'none'}; background: #0c0e15; border: 1px solid #272c3d; border-radius: 8px; padding: 14px; margin-bottom: 16px;">
+                        <label style="font-size: 11px; font-weight: 800; color: #f59e0b; text-transform: uppercase;">Issue Disciplinary Strike (Reason):</label>
+                        <input id="warn-reason-input" type="text" placeholder="e.g. Broke turf rule, insubordination, event absence" style="margin-top: 6px; margin-bottom: 12px;">
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn btn-red" style="flex: 1; padding: 9px; font-size: 12px;" onclick="submitIssueWarning()">⚠️ Issue Warning (+1 Strike)</button>
+                            <button class="btn btn-secondary" style="padding: 9px 12px; font-size: 12px;" onclick="submitClearWarnings()">🔄 Reset to 0</button>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; justify-content: flex-end;">
+                        <button class="btn btn-secondary" style="padding: 8px 18px;" onclick="closeModal('warnModal')">Close</button>
                     </div>
                 </div>
             </div>
@@ -2123,6 +2229,100 @@ async def handle_libra(request: web.Request):
                         setTimeout(() => location.reload(), 800);
                     }} else {{
                         alert("Error: " + d.error);
+                    }}
+                }}
+
+                async function openWarnModal(id, name, curStrikes) {{
+                    document.getElementById('warn-member-id').value = id;
+                    document.getElementById('warn-modal-sub').innerText = 'Managing clan warnings for ' + name + ' (ID ' + id + ')';
+                    let badge = document.getElementById('warn-strike-badge');
+                    if (curStrikes === 0) {{
+                        badge.className = 'badge badge-green';
+                        badge.style = '';
+                        badge.innerText = '0/3 CLEAN';
+                    }} else if (curStrikes === 1) {{
+                        badge.className = 'badge';
+                        badge.style = 'background:rgba(245,158,11,0.2); color:#fbbf24; border:1px solid #f59e0b;';
+                        badge.innerText = '1/3 WARN';
+                    }} else if (curStrikes === 2) {{
+                        badge.className = 'badge';
+                        badge.style = 'background:rgba(239,68,68,0.2); color:#f87171; border:1px solid #ef4444;';
+                        badge.innerText = '2/3 FINAL';
+                    }} else {{
+                        badge.className = 'badge badge-red';
+                        badge.style = '';
+                        badge.innerText = curStrikes + '/3 STRIKE';
+                    }}
+                    
+                    let histBox = document.getElementById('warn-history-box');
+                    histBox.innerHTML = '<span style="color:#64748b;">Loading warning history...</span>';
+                    
+                    try {{
+                        let res = await fetch('/api/libra/member/warnings?member_id=' + id);
+                        let d = await res.json();
+                        if (d.success && d.warnings && d.warnings.length > 0) {{
+                            let hHtml = '<div style="display:flex; flex-direction:column; gap:8px;">';
+                            d.warnings.forEach(w => {{
+                                let dateStr = (w.created_at || '').substring(0, 16);
+                                hHtml += '<div style="background:#0e111a; border:1px solid #232838; padding:8px 10px; border-radius:6px;">' +
+                                         '<div style="display:flex; justify-content:space-between; align-items:center;">' +
+                                         '<span style="color:#fbbf24; font-weight:800; font-size:11px;">⚠️ Strike #' + w.strike_number + '</span>' +
+                                         '<span style="color:#64748b; font-size:10px;">' + dateStr + '</span>' +
+                                         '</div>' +
+                                         '<div style="color:#f8fafc; font-size:12px; margin-top:3px;">' + w.reason + '</div>' +
+                                         '<div style="color:#64748b; font-size:10px; margin-top:3px;">Issued by: <b style="color:#cbd5e1;">' + w.issued_by + '</b></div>' +
+                                         '</div>';
+                            }});
+                            hHtml += '</div>';
+                            histBox.innerHTML = hHtml;
+                        }} else {{
+                            histBox.innerHTML = '<span style="color:#22c55e; font-weight:700;">✓ Clean record. No active strikes on record for this operative.</span>';
+                        }}
+                    }} catch (e) {{
+                        histBox.innerHTML = '<span style="color:#ef4444;">Failed to load warning history.</span>';
+                    }}
+                    
+                    let reasonInp = document.getElementById('warn-reason-input');
+                    if (reasonInp) reasonInp.value = '';
+                    openModal('warnModal');
+                }}
+
+                async function submitIssueWarning() {{
+                    let memberId = document.getElementById('warn-member-id').value;
+                    let reasonInp = document.getElementById('warn-reason-input');
+                    let reason = reasonInp ? reasonInp.value.trim() : '';
+                    if (!reason) {{
+                        alert("Please enter a reason for the warning.");
+                        return;
+                    }}
+                    let res = await fetch('/api/libra/member/warn', {{
+                        method: 'POST',
+                        headers: {{'Content-Type': 'application/json'}},
+                        body: JSON.stringify({{ member_id: memberId, reason: reason }})
+                    }});
+                    let d = await res.json();
+                    if (d.success) {{
+                        showToast("⚠️ Warning strike issued to operative!");
+                        setTimeout(() => location.reload(), 700);
+                    }} else {{
+                        alert("Error: " + (d.error || "Failed to issue warning"));
+                    }}
+                }}
+
+                async function submitClearWarnings() {{
+                    let memberId = document.getElementById('warn-member-id').value;
+                    if (!confirm("Are you sure you want to clear all active strikes for this member and reset to clean standing?")) return;
+                    let res = await fetch('/api/libra/member/clear_warn', {{
+                        method: 'POST',
+                        headers: {{'Content-Type': 'application/json'}},
+                        body: JSON.stringify({{ member_id: memberId }})
+                    }});
+                    let d = await res.json();
+                    if (d.success) {{
+                        showToast("✓ All warnings cleared for operative!");
+                        setTimeout(() => location.reload(), 700);
+                    }} else {{
+                        alert("Error: " + (d.error || "Failed to clear warnings"));
                     }}
                 }}
 
@@ -2520,6 +2720,60 @@ async def api_user_link_profiles(request: web.Request):
         traceback.print_exc()
         return web.json_response({"success": False, "error": str(e)})
 
+async def api_libra_member_warn(request: web.Request):
+    user = require_user(request)
+    data = await request.json()
+    member_id = int(data.get("member_id", 0))
+    reason = str(data.get("reason", "")).strip()
+    if not member_id or not reason:
+        return web.json_response({"success": False, "error": "Member ID and reason required."})
+
+    conn = db.get_connection()
+    m = conn.execute("SELECT rank_level, name FROM libra_members WHERE id = ?", (member_id,)).fetchone()
+    conn.close()
+    if not m:
+        return web.json_response({"success": False, "error": "Member not found"})
+
+    target_level = m["rank_level"]
+    if not db.user_can_manage_libra(user, target_level):
+        return web.json_response({"success": False, "error": f"You do not have permission to discipline {m['name']}."})
+
+    res = db.add_libra_warning(member_id, reason, issued_by=user["username"])
+    return web.json_response(res)
+
+async def api_libra_member_clear_warn(request: web.Request):
+    user = require_user(request)
+    data = await request.json()
+    member_id = int(data.get("member_id", 0))
+    if not member_id:
+        return web.json_response({"success": False, "error": "Member ID required."})
+
+    conn = db.get_connection()
+    m = conn.execute("SELECT rank_level, name FROM libra_members WHERE id = ?", (member_id,)).fetchone()
+    conn.close()
+    if not m:
+        return web.json_response({"success": False, "error": "Member not found"})
+
+    target_level = m["rank_level"]
+    if not db.user_can_manage_libra(user, target_level):
+        return web.json_response({"success": False, "error": f"You do not have permission to clear warnings for {m['name']}."})
+
+    db.clear_libra_warnings(member_id)
+    return web.json_response({"success": True})
+
+async def api_libra_member_warnings(request: web.Request):
+    require_user(request)
+    member_id = request.query.get("member_id")
+    if not member_id:
+        return web.json_response({"success": False, "error": "Member ID required"})
+    try:
+        mid = int(member_id)
+    except ValueError:
+        return web.json_response({"success": False, "error": "Invalid ID"})
+
+    warns = db.get_libra_warnings(mid)
+    return web.json_response({"success": True, "warnings": warns})
+
 async def api_user_dossier(request: web.Request):
     user = require_user(request)
     try:
@@ -2565,6 +2819,9 @@ def create_web_app():
     app.router.add_post("/api/libra/member/kick", api_libra_member_kick)
     app.router.add_post("/api/libra/member/add", api_libra_member_add)
     app.router.add_post("/api/libra/link_profile", api_libra_link_profile)
+    app.router.add_post("/api/libra/member/warn", api_libra_member_warn)
+    app.router.add_post("/api/libra/member/clear_warn", api_libra_member_clear_warn)
+    app.router.add_get("/api/libra/member/warnings", api_libra_member_warnings)
     app.router.add_post("/api/user/link_profiles", api_user_link_profiles)
     app.router.add_post("/api/user/dossier", api_user_dossier)
 

@@ -198,14 +198,14 @@ def init_db():
     dossier_cols = [
         ("grand_member_id", "TEXT DEFAULT '7104'"),
         ("grand_recent_activity", "TEXT DEFAULT 'Pineapple Plantation Harvest Banked • Active Fleet Operative'"),
-        ("grand_awards", "TEXT DEFAULT '🎖️ Malayali Club Honor Medal • 🌟 Top Plantation Tycoon'"),
+        ("grand_awards", "TEXT DEFAULT ''"),
         ("grand_punishments", "TEXT DEFAULT 'Clean Record (0 Active Warnings)'"),
         ("libra_recent_activity", "TEXT DEFAULT '● Online now • Fedrix Clan Operations'"),
-        ("libra_awards", "TEXT DEFAULT '⚔️ Fedrix Vanguard Cross • 🏆 Master Turf Tactician'"),
+        ("libra_awards", "TEXT DEFAULT ''"),
         ("libra_punishments", "TEXT DEFAULT 'Good Standing (0 Suspensions)'"),
         ("discord_rank", "TEXT DEFAULT '👑 High Command Staff'"),
         ("discord_recent_activity", "TEXT DEFAULT 'Authenticated via OAuth2 • Command Center Active'"),
-        ("discord_awards", "TEXT DEFAULT '⭐ Server Creator • 🛡️ Bot Administrator'"),
+        ("discord_awards", "TEXT DEFAULT ''"),
         ("discord_punishments", "TEXT DEFAULT 'Clean Record (0 Mutes / Warnings)'")
     ]
     for c_name, c_def in dossier_cols:
@@ -214,6 +214,14 @@ def init_db():
                 cursor.execute(f"ALTER TABLE user_profiles ADD COLUMN {c_name} {c_def}")
             except Exception:
                 pass
+
+    # Clear any placeholder awards so it stays empty until awarded by leadership
+    try:
+        cursor.execute("UPDATE user_profiles SET grand_awards = '' WHERE grand_awards LIKE '%Malayali Club Honor Medal%'")
+        cursor.execute("UPDATE user_profiles SET libra_awards = '' WHERE libra_awards LIKE '%Fedrix Vanguard Cross%'")
+        cursor.execute("UPDATE user_profiles SET discord_awards = '' WHERE discord_awards LIKE '%Server Creator%'")
+    except Exception:
+        pass
 
     # 6. Libra RP Ranks Hierarchy
     cursor.execute("""
@@ -258,6 +266,22 @@ def init_db():
         cursor.execute("ALTER TABLE libra_members ADD COLUMN discord_id TEXT")
     if "discord_username" not in l_cols:
         cursor.execute("ALTER TABLE libra_members ADD COLUMN discord_username TEXT")
+    if "warnings" not in l_cols:
+        cursor.execute("ALTER TABLE libra_members ADD COLUMN warnings INTEGER DEFAULT 0")
+
+    # 8. Libra RP Clan Warnings (Isolated from Grand & Discord)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS libra_warnings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        member_id INTEGER NOT NULL,
+        member_name TEXT NOT NULL,
+        reason TEXT NOT NULL,
+        issued_by TEXT NOT NULL,
+        strike_number INTEGER DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        is_active BOOLEAN DEFAULT 1
+    )
+    """)
     member_count = cursor.execute("SELECT COUNT(*) FROM libra_members").fetchone()[0]
     if member_count == 0:
         initial_members = [
@@ -557,7 +581,7 @@ def update_user_dossier(user_id: str, dossier_data: dict) -> bool:
 
 def get_libra_members() -> List[Dict[str, Any]]:
     conn = get_connection()
-    rows = conn.execute("SELECT * FROM libra_members ORDER BY is_online DESC, rank_level ASC, name ASC").fetchall()
+    rows = conn.execute("SELECT * FROM libra_members ORDER BY rank_level ASC, name ASC").fetchall()
     conn.close()
     return [dict(r) for r in rows]
 
@@ -683,6 +707,70 @@ def user_can_manage_libra(user: dict, target_level: Optional[int] = None) -> boo
         # Strictly higher rank (e.g. Lv 1 Leader can manage Lv 2+, Lv 2 Co-Leader can manage Lv 3+, Lv 3 Supervisor can manage Lv 4+)
         return actor_level < target_level
     
+    return True
+
+# ==================== LIBRA WARNINGS SYSTEM ====================
+
+def get_libra_warnings(member_id: Optional[int] = None) -> List[Dict[str, Any]]:
+    conn = get_connection()
+    if member_id:
+        rows = conn.execute("SELECT * FROM libra_warnings WHERE member_id = ? AND is_active = 1 ORDER BY created_at DESC", (int(member_id),)).fetchall()
+    else:
+        rows = conn.execute("SELECT * FROM libra_warnings ORDER BY created_at DESC LIMIT 50").fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+def add_libra_warning(member_id: int, reason: str, issued_by: str) -> Dict[str, Any]:
+    conn = get_connection()
+    m = conn.execute("SELECT name, warnings, rank_level FROM libra_members WHERE id = ?", (int(member_id),)).fetchone()
+    if not m:
+        conn.close()
+        return {"success": False, "error": "Member not found"}
+    
+    cur_warnings = m['warnings'] or 0
+    new_count = cur_warnings + 1
+    
+    conn.execute("UPDATE libra_members SET warnings = ? WHERE id = ?", (new_count, int(member_id)))
+    conn.execute("""
+    INSERT INTO libra_warnings (member_id, member_name, reason, issued_by, strike_number, is_active)
+    VALUES (?, ?, ?, ?, ?, 1)
+    """, (int(member_id), m['name'], reason.strip(), issued_by.strip(), new_count))
+    
+    # Update linked user profile disciplinary status
+    m_row = conn.execute("SELECT discord_id FROM libra_members WHERE id = ?", (int(member_id),)).fetchone()
+    if m_row and m_row['discord_id']:
+        conn.execute("""
+        UPDATE user_profiles
+        SET libra_punishments = ?
+        WHERE user_id = ?
+        """, (f"⚠️ {new_count}/3 Warnings: {reason.strip()}", str(m_row['discord_id'])))
+    
+    conn.commit()
+    conn.close()
+    return {
+        "success": True,
+        "member_id": int(member_id),
+        "member_name": m['name'],
+        "strike_number": new_count,
+        "reason": reason.strip(),
+        "issued_by": issued_by.strip()
+    }
+
+def clear_libra_warnings(member_id: int) -> bool:
+    conn = get_connection()
+    conn.execute("UPDATE libra_members SET warnings = 0 WHERE id = ?", (int(member_id),))
+    conn.execute("UPDATE libra_warnings SET is_active = 0 WHERE member_id = ?", (int(member_id),))
+    
+    m_row = conn.execute("SELECT discord_id FROM libra_members WHERE id = ?", (int(member_id),)).fetchone()
+    if m_row and m_row['discord_id']:
+        conn.execute("""
+        UPDATE user_profiles
+        SET libra_punishments = 'Good Standing (0 Suspensions)'
+        WHERE user_id = ?
+        """, (str(m_row['discord_id']),))
+        
+    conn.commit()
+    conn.close()
     return True
 
 # Initialize database tables on load
