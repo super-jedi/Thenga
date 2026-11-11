@@ -27,7 +27,7 @@ def init_db():
 
     # Seed initial balances for GrandRP and LibraRP if not present
     cursor.execute("INSERT OR IGNORE INTO bank_balances (server, balance, total_deposited, total_withdrawn, total_tax_paid) VALUES ('grandrp', 28454644.0, 0.0, 0.0, 0.0)")
-    cursor.execute("INSERT OR IGNORE INTO bank_balances (server, balance, total_deposited, total_withdrawn, total_tax_paid) VALUES ('librarp', 0.0, 0.0, 0.0, 0.0)")
+    cursor.execute("INSERT OR IGNORE INTO bank_balances (server, balance, total_deposited, total_withdrawn, total_tax_paid) VALUES ('librarp', 2189500.0, 0.0, 0.0, 0.0)")
 
     # 2. Bank Transactions
     cursor.execute("""
@@ -113,7 +113,33 @@ def init_db():
             ('grandrp', 'Bodhi', '2YTH244', 'Family Truck', 'superjedi'),
             ('grandrp', 'Rebel', '8IZQ234', 'Family Truck', 'superjedi'),
             ('grandrp', 'Bodhi', '9ZIY573', 'Family Truck', 'superjedi'),
-            ('grandrp', 'Rusty Rebel', '4CAG723', 'Family Truck', 'superjedi')
+            ('grandrp', 'Rusty Rebel', '4CAG723', 'Family Truck', 'superjedi'),
+
+            # Libra RP (Fedrix Fleet)
+            ('librarp', 'Annis Elegy X50', 'FEDRIX10', 'Rank 6+ Required', 'superjedi'),
+            ('librarp', 'Annis R35R', 'FEDRIX11', 'Rank 6+ Required', 'superjedi'),
+            ('librarp', 'Benefactor Feltzer X Convertible', 'FEDRIX2', 'Rank 4+ Required', 'superjedi'),
+            ('librarp', 'Benefactor GT Black Series', 'FEDRIX9', 'Rank 4+ Required', 'superjedi'),
+            ('librarp', 'Benefactor GX63', 'FEDRIX15', 'Rank 2+ Required', 'superjedi'),
+            ('librarp', 'Benefactor X223', 'FEDRIX3', 'Rank 6+ Required', 'superjedi'),
+            ('librarp', 'Bravado Bison 1500', 'FEDRIX8', 'Rank 2+ Required', 'superjedi'),
+            ('librarp', 'Bravado Bison TX', 'FEDRIX6', 'Rank 6+ Required', 'superjedi'),
+            ('librarp', 'Coil Raiden Cross', None, 'Rank 1+ (No Plate)', 'superjedi'),
+            ('librarp', 'Coil Tempest', 'FEDRIX16', 'Rank 1+ Required', 'superjedi'),
+            ('librarp', 'Declasse C7', 'JOKBR', 'Rank 1+ Required', 'superjedi'),
+            ('librarp', 'Emperor Cruise 300', 'FEDRIX14', 'Rank 6+ Required', 'superjedi'),
+            ('librarp', 'Emperor LF', 'FEDRIX5', 'Rank 2+ Required', 'superjedi'),
+            ('librarp', 'Gallivanter Baller SVX', None, 'Rank 1+ (No Plate)', 'superjedi'),
+            ('librarp', 'Karin L500', 'FEDRIX', 'Rank 3+ Required', 'superjedi'),
+            ('librarp', 'Karin L500', 'FEDR1X', 'Rank 6+ Required', 'superjedi'),
+            ('librarp', 'Karin WRX', None, 'Rank 1+ (No Plate)', 'superjedi'),
+            ('librarp', 'Maibatsu Frogger', None, 'Rank 6+ Helicopter (No Plate)', 'superjedi'),
+            ('librarp', 'Overflod Zenith GT', 'FEDRIX13', 'Rank 5+ Required', 'superjedi'),
+            ('librarp', 'Pegassi Terzo', 'FEDRIX12', 'Rank 4+ Required', 'superjedi'),
+            ('librarp', 'Pegassi Ursano', 'FEDRIX7', 'Rank 6+ Required', 'superjedi'),
+            ('librarp', 'Pfister GT-One', 'J8KER', 'Rank 5+ Required', 'superjedi'),
+            ('librarp', 'Rebel', 'JOK3R', 'Rank 1+ Required', 'superjedi'),
+            ('librarp', 'Ubermacht M5 DRIFT', 'FEDRIX4', 'Rank 9+ Required', 'superjedi')
         ]
         cursor.executemany("""
         INSERT INTO vehicles (server, name, plate, insurance_expiry, notes, added_by)
@@ -153,6 +179,22 @@ def init_db():
         last_triggered_date TEXT DEFAULT ''
     )
     """)
+
+    # Seed Libra RP Events if table is empty
+    event_count = cursor.execute("SELECT COUNT(*) FROM events").fetchone()[0]
+    if event_count == 0:
+        cursor.execute("""
+        INSERT INTO events (server, name, time_utc, description, role_id, channel_id)
+        VALUES ('librarp', 'Crown Holder', '10:00', 'Location: Grand Senora Desert (Radius: 120m) • Duration: 15m (Join window: 5m) [05:00 ET]', NULL, 0)
+        """)
+        cursor.execute("""
+        INSERT INTO events (server, name, time_utc, description, role_id, channel_id)
+        VALUES ('librarp', 'Weapon Factory', '13:00', 'Location: Paleto Bay Weapon Factory (Radius: 125m) • Rewards: Weapons, Ammo, Armor, Clan Points [08:00 ET]', NULL, 0)
+        """)
+        cursor.execute("""
+        INSERT INTO events (server, name, time_utc, description, role_id, channel_id)
+        VALUES ('librarp', 'Cartel War', '02:30', 'Location: #17 Grand Senora Desert (Radius: 150m) • Daily Limit: 3/24 [21:30 ET]', NULL, 0)
+        """)
 
     conn.commit()
     conn.close()
