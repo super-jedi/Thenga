@@ -40,18 +40,18 @@ async def on_ready():
         print(f" - {g.name} (ID: {g.id})")
     print("==================================================")
 
-    # Sync Slash Commands across all servers (Global + Instant Guild Sync)
+    # Clear any guild-specific duplicates that were copied before, then sync single global commands
     try:
-        synced = await bot.tree.sync()
-        print(f"Synced {len(synced)} global slash command(s).")
-
         for g in bot.guilds:
             try:
-                bot.tree.copy_global_to(guild=g)
-                g_synced = await bot.tree.sync(guild=g)
-                print(f"Instant synced {len(g_synced)} slash command(s) to '{g.name}' (ID: {g.id}).")
+                bot.tree.clear_commands(guild=g)
+                await bot.tree.sync(guild=g)
+                print(f"Purged guild-level duplicate slash commands for '{g.name}' (ID: {g.id}).")
             except Exception as ge:
-                print(f"Warning: Could not sync to guild '{g.name}': {ge}")
+                print(f"Warning: Could not clear guild commands for '{g.name}': {ge}")
+
+        synced = await bot.tree.sync()
+        print(f"Synced {len(synced)} unique global slash command(s) successfully.")
     except Exception as e:
         print(f"Error syncing slash commands: {e}")
 

@@ -8,7 +8,7 @@ from typing import Optional, Dict, Any, List
 from collections import deque
 
 # Suppress noise about console
-yt_dlp.utils.bug_reports_message = lambda: ''
+yt_dlp.utils.bug_reports_message = lambda *args, **kwargs: ''
 
 YTDL_OPTIONS = {
     'format': 'bestaudio/best',
@@ -25,6 +25,11 @@ YTDL_OPTIONS = {
     'default_search': 'ytsearch',
     'cachedir': False,
     'skip_download': True,
+    'extractor_args': {
+        'youtube': {
+            'player_client': ['android', 'web']
+        }
+    },
 }
 
 FFMPEG_OPTIONS = {
@@ -106,7 +111,7 @@ class GuildPlayer:
                 loop = asyncio.get_event_loop()
                 data = await loop.run_in_executor(
                     None,
-                    lambda: ytdl.extract_info(track.webpage_url, download=False)
+                    functools.partial(ytdl.extract_info, track.webpage_url, download=False)
                 )
                 stream_url = data.get('url')
                 if not stream_url and 'formats' in data:
@@ -194,9 +199,11 @@ class Music(commands.Cog):
             search_query = query if query.startswith(('http://', 'https://')) else f"ytsearch:{query}"
             data = await loop.run_in_executor(
                 None,
-                lambda: ytdl.extract_info(search_query, download=False)
+                functools.partial(ytdl.extract_info, search_query, download=False)
             )
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             await interaction.followup.send(f"❌ Failed to extract audio: `{e}`")
             return
 

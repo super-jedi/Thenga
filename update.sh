@@ -16,7 +16,7 @@ git pull origin main
 echo "📦 [2/3] Cleaning cache and installing dependencies..."
 python3 -m pip uninstall -y yt-dlp 2>/dev/null || true
 python3 -m pip cache purge 2>/dev/null || true
-python3 -m pip install --no-cache-dir -U "yt-dlp[default]"
+python3 -m pip install --no-cache-dir -U "yt-dlp[default]" yt-dlp-ejs
 python3 -m pip install -r requirements.txt
 
 # 3. Restart PM2 process
