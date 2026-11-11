@@ -68,7 +68,7 @@ async def on_ready():
         print(f"Error syncing slash commands: {e}")
 
 async def start_web_server():
-    app = create_web_app()
+    app = create_web_app(bot=bot)
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, "0.0.0.0", PORT)

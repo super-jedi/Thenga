@@ -3,11 +3,13 @@ import json
 import base64
 import hmac
 import hashlib
+import asyncio
 import aiohttp
 from aiohttp import web
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any
 from dotenv import load_dotenv
+import discord
 
 import database as db
 from utils import format_money, parse_amount, is_admin_user
@@ -16,6 +18,66 @@ load_dotenv()
 
 CLIENT_ID = os.getenv("DISCORD_CLIENT_ID", "1567865230829035530")
 SECRET_KEY = db.get_or_create_session_secret()
+
+# Discord Web Notification Channels for Libra Operations
+LIBRA_ACTIONS_CHANNEL_ID = int(os.environ.get("LIBRA_ACTIONS_CHANNEL_ID", 1550170712784904222))   # warn, rank, kick
+LIBRA_TREASURY_CHANNEL_ID = int(os.environ.get("LIBRA_TREASURY_CHANNEL_ID", 1554867869764948070)) # Clan treasure transactions
+
+_BOT_INSTANCE = None
+
+async def send_discord_notification(channel_id: int, embed_dict: dict, content: Optional[str] = None) -> bool:
+    """
+    Sends an embed notification to a specific Discord channel or thread.
+    Uses the running Bot instance if available and ready;
+    falls back to direct Discord HTTP REST API via DISCORD_BOT_TOKEN.
+    """
+    token = os.getenv("DISCORD_BOT_TOKEN")
+
+    # 1. Try via running Discord bot instance
+    global _BOT_INSTANCE
+    if _BOT_INSTANCE and hasattr(_BOT_INSTANCE, "is_ready") and _BOT_INSTANCE.is_ready():
+        try:
+            ch = _BOT_INSTANCE.get_channel(channel_id)
+            if not ch:
+                try:
+                    ch = await _BOT_INSTANCE.fetch_channel(channel_id)
+                except Exception:
+                    ch = None
+            if ch:
+                discord_embed = discord.Embed.from_dict(embed_dict)
+                await ch.send(content=content, embed=discord_embed)
+                print(f"[Discord Notify] Sent notification to channel/thread {channel_id} via Bot.")
+                return True
+        except Exception as be:
+            print(f"[Discord Notify] Bot gateway delivery to {channel_id} failed ({be}), attempting REST API fallback...")
+
+    # 2. Universal REST API fallback (works independently of Discord gateway / voice states)
+    if not token or token == "your_bot_token_here":
+        print(f"[Discord Notify] Skipping notification to channel {channel_id}: DISCORD_BOT_TOKEN missing.")
+        return False
+
+    url = f"https://discord.com/api/v10/channels/{channel_id}/messages"
+    headers = {
+        "Authorization": f"Bot {token}",
+        "Content-Type": "application/json"
+    }
+    payload = {"embeds": [embed_dict]}
+    if content:
+        payload["content"] = content
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, headers=headers, json=payload) as resp:
+                if resp.status in (200, 201):
+                    print(f"[Discord Notify] Delivered notification to channel/thread {channel_id} via REST API.")
+                    return True
+                else:
+                    err_text = await resp.text()
+                    print(f"[Discord Notify] Failed to post notification to channel {channel_id} (HTTP {resp.status}): {err_text}")
+                    return False
+    except Exception as e:
+        print(f"[Discord Notify] Error sending notification to channel {channel_id}: {e}")
+        return False
 
 def get_client_secret() -> str:
     return os.getenv("DISCORD_CLIENT_SECRET", "").strip()
@@ -200,25 +262,25 @@ COMMON_CSS = """
 :root {
     /* Midnight Navy Slate Theme from Figma Redesign */
     --bg-page: #0b0e14;
-    --bg-sidebar: #111622;
+    --bg-sidebar: #0f1420;
     --bg-card: #111622;
     --bg-card-hover: #141a29;
     --bg-input: #0c0f17;
     --bg-subtle: #131926;
-    --border-subtle: #161d2b;
-    --border-highlight: #222d42;
-    --accent-emerald: #22c55e;
-    --accent-emerald-hover: #16a34a;
-    --accent-emerald-glow: rgba(34, 197, 94, 0.25);
-    --accent-emerald-subtle: rgba(34, 197, 94, 0.12);
-    --accent-emerald-border: rgba(34, 197, 94, 0.35);
+    --border-subtle: #1a2234;
+    --border-highlight: #242f47;
+    --accent-emerald: #10b981;
+    --accent-emerald-hover: #059669;
+    --accent-emerald-glow: rgba(16, 185, 129, 0.25);
+    --accent-emerald-subtle: rgba(16, 185, 129, 0.10);
+    --accent-emerald-border: rgba(16, 185, 129, 0.30);
     --accent-crimson: #ef4444;
     --accent-crimson-hover: #dc2626;
-    --accent-crimson-glow: rgba(239, 68, 68, 0.35);
+    --accent-crimson-glow: rgba(239, 68, 68, 0.25);
     --accent-gold: #f59e0b;
-    --accent-gold-glow: rgba(245, 158, 11, 0.25);
-    --accent-blue: #3b82f6;
-    --accent-purple: #a855f7;
+    --accent-gold-glow: rgba(245, 158, 11, 0.20);
+    --accent-blue: #38bdf8;
+    --accent-purple: #10b981;
     --text-white: #ffffff;
     --text-muted: #94a3b8;
     --text-dim: #64748b;
@@ -226,16 +288,16 @@ COMMON_CSS = """
     /* Legacy aliases mapped to Figma palette */
     --bg-dark: #0b0e14;
     --card-bg: #111622;
-    --card-border: #161d2b;
-    --accent: #22c55e;
-    --accent-hover: #16a34a;
-    --accent-glow: rgba(34, 197, 94, 0.25);
+    --card-border: #1a2234;
+    --accent: #10b981;
+    --accent-hover: #059669;
+    --accent-glow: rgba(16, 185, 129, 0.25);
     --gold: #f59e0b;
-    --tender-green: #22c55e;
-    --green-glow: rgba(34, 197, 94, 0.25);
-    --cyan: #06b6d4;
+    --tender-green: #10b981;
+    --green-glow: rgba(16, 185, 129, 0.25);
+    --cyan: #10b981;
     --red: #ef4444;
-    --purple: #a855f7;
+    --purple: #10b981;
     --text-primary: #ffffff;
     --text-secondary: #94a3b8;
 }
@@ -671,8 +733,21 @@ body {
     box-shadow: 0 0 15px var(--accent-emerald-glow); 
     transform: translateY(-1px);
 }
-.btn-red { background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); color: white; }
-.btn-purple { background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; }
+.btn-red {
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    color: #f87171;
+}
+.btn-red:hover {
+    background: #ef4444;
+    border-color: #ef4444;
+    color: #ffffff;
+    box-shadow: 0 0 16px rgba(239, 68, 68, 0.35);
+}
+.btn-purple { 
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%); 
+    color: white; 
+}
 .btn-secondary { background: #131926; color: #e2e8f0; border: 1px solid #232c3d; }
 .btn-secondary:hover { background: #182030; color: #fff; border-color: #334155; }
 .btn-delete {
@@ -1050,8 +1125,8 @@ th { color: var(--text-dim); font-size: 11px; text-transform: uppercase; letter-
     border-color: #3b445f;
 }
 .ingame-btn-action {
-    background: #131926;
-    border: 1px solid #1f2738;
+    background: #111622;
+    border: 1px solid #1a2234;
     color: var(--text-muted);
     font-size: 11px;
     font-weight: 700;
@@ -1059,16 +1134,16 @@ th { color: var(--text-dim); font-size: 11px; text-transform: uppercase; letter-
     border-radius: 6px;
     cursor: pointer;
     letter-spacing: 0.5px;
-    transition: all 0.15s;
+    transition: all 0.15s ease;
 }
-.ingame-btn-action:hover {
-    background: #1c2436;
-    color: #fff;
-    border-color: #3b82f6;
+.ingame-btn-action:hover, .ingame-btn-action.btn-rank:hover {
+    background: var(--accent-emerald-subtle);
+    color: var(--accent-emerald);
+    border-color: var(--accent-emerald-border);
 }
 .ingame-btn-action.btn-warn {
-    background: #131926;
-    border-color: #1f2738;
+    background: #111622;
+    border: 1px solid #1a2234;
     color: var(--text-muted);
 }
 .ingame-btn-action.btn-warn:hover {
@@ -1077,8 +1152,8 @@ th { color: var(--text-dim); font-size: 11px; text-transform: uppercase; letter-
     color: #fbbf24;
 }
 .ingame-btn-action.btn-kick {
-    background: #131926;
-    border-color: #1f2738;
+    background: #111622;
+    border: 1px solid #1a2234;
     color: var(--text-muted);
 }
 .ingame-btn-action.btn-kick:hover {
@@ -2789,7 +2864,7 @@ async def handle_libra(request: web.Request):
         actions_html = ""
         if can_edit_this:
             actions_html = f'''
-            <button class="ingame-btn-action" onclick="openRankModal({mid}, \'{safe_name}\', {mlvl}, \'{mrname}\')">RANK</button>
+            <button class="ingame-btn-action btn-rank" onclick="openRankModal({mid}, \'{safe_name}\', {mlvl}, \'{mrname}\')">RANK</button>
             <button class="ingame-btn-action btn-warn" onclick="openWarnModal({mid}, \'{safe_name}\', {w_cnt})">WARN</button>
             <button class="ingame-btn-action btn-kick" onclick="openKickModal({mid}, \'{safe_name}\', {mlvl})">KICK</button>
             '''
@@ -3278,7 +3353,7 @@ async def handle_libra(request: web.Request):
     libra_modals = f'''
     <!-- MODAL 1: EDIT RANK -->
     <div id="rankModal" class="modal-backdrop">
-        <div class="card" style="max-width: 440px; width: 100%; border: 1.5px solid #ef4444; box-shadow: 0 10px 40px rgba(0,0,0,0.8);">
+        <div class="card" style="max-width: 440px; width: 100%; border: 1px solid var(--border-subtle); box-shadow: 0 10px 40px rgba(0,0,0,0.8);">
             <h3 style="color: #fff; font-size: 18px; font-weight: 900; margin-bottom: 4px;">🎖️ Edit Clan Member Rank</h3>
             <p id="rank-modal-sub" style="color: #94a3b8; font-size: 13px; margin-bottom: 16px;">Update rank for member</p>
             <input type="hidden" id="edit-member-id">
@@ -3445,7 +3520,7 @@ async def handle_libra(request: web.Request):
 
     <!-- MODAL 6: EDIT DOSSIER -->
     <div id="dossierModal" class="modal-backdrop">
-        <div class="card" style="max-width: 480px; width: 100%; border: 1.5px solid var(--accent); box-shadow: 0 16px 50px rgba(0,0,0,0.85); border-radius: 14px;">
+        <div class="card" style="max-width: 480px; width: 100%; border: 1px solid var(--border-subtle); box-shadow: 0 16px 50px rgba(0,0,0,0.85); border-radius: 14px;">
             <h3 id="dossier-modal-title" style="color: #fff; font-size: 18px; font-weight: 900; margin-bottom: 4px;">✏️ Edit Operative Dossier</h3>
             <p style="color: #94a3b8; font-size: 13px; margin-bottom: 16px;">Update activity, awards, and disciplinary details</p>
             <input type="hidden" id="dossier-type">
@@ -3707,19 +3782,19 @@ async def handle_libra(request: web.Request):
         document.getElementById('warn-modal-sub').innerText = 'Managing clan warnings for ' + name + ' (ID ' + id + ')';
         let badge = document.getElementById('warn-strike-badge');
         if (curStrikes === 0) {{
-            badge.className = 'badge badge-green';
+            badge.className = 'badge badge-clean';
             badge.style = '';
             badge.innerText = '0/3 CLEAN';
         }} else if (curStrikes === 1) {{
-            badge.className = 'badge';
-            badge.style = 'background:rgba(245,158,11,0.2); color:#fbbf24; border:1px solid #f59e0b;';
+            badge.className = 'badge badge-warn-1';
+            badge.style = '';
             badge.innerText = '1/3 WARN';
         }} else if (curStrikes === 2) {{
-            badge.className = 'badge';
-            badge.style = 'background:rgba(239,68,68,0.2); color:#f87171; border:1px solid #ef4444;';
+            badge.className = 'badge badge-warn-2';
+            badge.style = '';
             badge.innerText = '2/3 FINAL';
         }} else {{
-            badge.className = 'badge badge-red';
+            badge.className = 'badge badge-warn-strike';
             badge.style = '';
             badge.innerText = curStrikes + '/3 STRIKE';
         }}
@@ -4013,6 +4088,24 @@ async def api_bank_deposit(request: web.Request):
 
     db.record_bank_transaction(server, user["id"], user["username"], "deposit", gross, tax, net, reason)
     bal = db.get_bank_balance(server)
+
+    if server == "librarp":
+        actor_mention = f"<@{user['id']}>" if str(user.get("id", "")).isdigit() and len(str(user["id"])) > 10 else f"**@{user['username']}**"
+        embed = {
+            "title": "📥 Libra RP Clan Treasury Deposit",
+            "description": f"Direct deposit credited to **Fedrix Clan Treasury** via Web Dashboard.",
+            "color": 0x22c55e,
+            "fields": [
+                {"name": "💰 Amount Added", "value": f"**{format_money(net)}**", "inline": True},
+                {"name": "🏦 Updated Treasury", "value": f"**{format_money(bal['balance'])}**", "inline": True},
+                {"name": "📝 Reason / Source", "value": reason or "Clan task / contribution", "inline": False},
+                {"name": "👤 Deposited By", "value": f"{actor_mention} (`{user['username']}`)", "inline": False}
+            ],
+            "footer": {"text": "Fedrix Clan Treasury • 0% Tax • Thenga Network"},
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+        asyncio.create_task(send_discord_notification(LIBRA_TREASURY_CHANNEL_ID, embed))
+
     return web.json_response({"success": True, "balance": bal["balance"], "net": net, "tax": tax})
 
 async def api_bank_withdraw(request: web.Request):
@@ -4032,6 +4125,24 @@ async def api_bank_withdraw(request: web.Request):
 
     db.record_bank_transaction(server, user["id"], user["username"], "withdraw", gross, tax, net, reason)
     bal = db.get_bank_balance(server)
+
+    if server == "librarp":
+        actor_mention = f"<@{user['id']}>" if str(user.get("id", "")).isdigit() and len(str(user["id"])) > 10 else f"**@{user['username']}**"
+        embed = {
+            "title": "📤 Libra RP Clan Treasury Withdrawal",
+            "description": f"Funds disbursed from **Fedrix Clan Treasury** via Web Dashboard.",
+            "color": 0xef4444,
+            "fields": [
+                {"name": "💸 Amount Disbursed", "value": f"**{format_money(net)}**", "inline": True},
+                {"name": "🏦 Updated Treasury", "value": f"**{format_money(bal['balance'])}**", "inline": True},
+                {"name": "📝 Purpose / Reason", "value": reason or "Clan operations / purchase", "inline": False},
+                {"name": "👤 Authorized By", "value": f"{actor_mention} (`{user['username']}`)", "inline": False}
+            ],
+            "footer": {"text": "Fedrix Clan Treasury • 0% Tax • Thenga Network"},
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+        asyncio.create_task(send_discord_notification(LIBRA_TREASURY_CHANNEL_ID, embed))
+
     return web.json_response({"success": True, "balance": bal["balance"], "net": net, "tax": tax})
 
 async def api_vehicle_add(request: web.Request):
@@ -4120,16 +4231,34 @@ async def api_libra_member_rank(request: web.Request):
         return web.json_response({"success": False, "error": "Invalid parameters"})
 
     conn = db.get_connection()
-    m = conn.execute("SELECT rank_level, name FROM libra_members WHERE id = ?", (member_id,)).fetchone()
+    m = conn.execute("SELECT rank_level, rank_name, name FROM libra_members WHERE id = ?", (member_id,)).fetchone()
     conn.close()
     if not m:
         return web.json_response({"success": False, "error": "Member not found"})
 
     target_level = m["rank_level"]
+    old_rank_name = m["rank_name"] or f"Lv {target_level}"
     if not db.user_can_manage_libra(user, target_level):
         return web.json_response({"success": False, "error": f"You do not have permission to change {m['name']}'s rank."})
 
     db.update_libra_member_rank(member_id, new_level, new_rank)
+
+    actor_mention = f"<@{user['id']}>" if str(user.get("id", "")).isdigit() and len(str(user["id"])) > 10 else f"**@{user['username']}**"
+    embed = {
+        "title": "🎖️ Libra RP Rank Promotion / Update",
+        "description": f"Clan rank for **{m['name']}** has been updated via Web Dashboard.",
+        "color": 0x22c55e,
+        "fields": [
+            {"name": "👤 Operative", "value": f"**{m['name']}** (`ID #{member_id}`)", "inline": True},
+            {"name": "📉 Previous Rank", "value": f"Lv {target_level} {old_rank_name}", "inline": True},
+            {"name": "📈 New Rank", "value": f"**Lv {new_level} {new_rank}**", "inline": True},
+            {"name": "🛡️ Updated By", "value": f"{actor_mention} (`{user['username']}`)", "inline": False}
+        ],
+        "footer": {"text": "Fedrix Clan Hierarchy • Thenga Network"},
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+    asyncio.create_task(send_discord_notification(LIBRA_ACTIONS_CHANNEL_ID, embed))
+
     return web.json_response({"success": True})
 
 async def api_libra_member_kick(request: web.Request):
@@ -4140,16 +4269,34 @@ async def api_libra_member_kick(request: web.Request):
         return web.json_response({"success": False, "error": "Invalid member parameter"})
 
     conn = db.get_connection()
-    m = conn.execute("SELECT rank_level, name FROM libra_members WHERE id = ?", (member_id,)).fetchone()
+    m = conn.execute("SELECT rank_level, rank_name, name FROM libra_members WHERE id = ?", (member_id,)).fetchone()
     conn.close()
     if not m:
         return web.json_response({"success": False, "error": "Member not found"})
 
     target_level = m["rank_level"]
+    target_rank = m["rank_name"] or f"Lv {target_level}"
     if not db.user_can_manage_libra(user, target_level):
         return web.json_response({"success": False, "error": f"You do not have permission to kick {m['name']}."})
 
     db.kick_libra_member(member_id)
+
+    actor_mention = f"<@{user['id']}>" if str(user.get("id", "")).isdigit() and len(str(user["id"])) > 10 else f"**@{user['username']}**"
+    embed = {
+        "title": "🚨 Libra RP Operative Dismissal / Kick",
+        "description": f"**{m['name']}** (`ID #{member_id}`) has been dismissed and removed from the Fedrix Clan roster via Web Dashboard.",
+        "color": 0xef4444,
+        "fields": [
+            {"name": "👤 Operative", "value": f"**{m['name']}** (`ID #{member_id}`)", "inline": True},
+            {"name": "🎖️ Former Rank", "value": f"Lv {target_level} {target_rank}", "inline": True},
+            {"name": "⚠️ Status", "value": "**Kicked from Clan**", "inline": True},
+            {"name": "🛡️ Dismissed By", "value": f"{actor_mention} (`{user['username']}`)", "inline": False}
+        ],
+        "footer": {"text": "Fedrix Clan Governance • Thenga Network"},
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+    asyncio.create_task(send_discord_notification(LIBRA_ACTIONS_CHANNEL_ID, embed))
+
     return web.json_response({"success": True})
 
 async def api_libra_member_add(request: web.Request):
@@ -4210,16 +4357,37 @@ async def api_libra_member_warn(request: web.Request):
         return web.json_response({"success": False, "error": "Member ID and reason required."})
 
     conn = db.get_connection()
-    m = conn.execute("SELECT rank_level, name FROM libra_members WHERE id = ?", (member_id,)).fetchone()
+    m = conn.execute("SELECT rank_level, rank_name, name FROM libra_members WHERE id = ?", (member_id,)).fetchone()
     conn.close()
     if not m:
         return web.json_response({"success": False, "error": "Member not found"})
 
     target_level = m["rank_level"]
+    target_rank = m["rank_name"] or f"Lv {target_level}"
     if not db.user_can_manage_libra(user, target_level):
         return web.json_response({"success": False, "error": f"You do not have permission to discipline {m['name']}."})
 
     res = db.add_libra_warning(member_id, reason, issued_by=user["username"])
+    if res.get("success"):
+        strike = res.get("strike", 1)
+        actor_mention = f"<@{user['id']}>" if str(user.get("id", "")).isdigit() and len(str(user["id"])) > 10 else f"**@{user['username']}**"
+        color = 0xef4444 if strike >= 3 else 0xf59e0b
+        embed = {
+            "title": "⚠️ Libra RP Disciplinary Strike Issued",
+            "description": f"A disciplinary strike has been issued against **{m['name']}** via Web Dashboard.",
+            "color": color,
+            "fields": [
+                {"name": "👤 Operative", "value": f"**{m['name']}** (`ID #{member_id}`)", "inline": True},
+                {"name": "🎖️ Clan Rank", "value": f"Lv {target_level} {target_rank}", "inline": True},
+                {"name": "🚨 Strike Count", "value": f"**{strike} / 3 Strikes**", "inline": True},
+                {"name": "📝 Reason", "value": reason, "inline": False},
+                {"name": "🛡️ Issued By", "value": f"{actor_mention} (`{user['username']}`)", "inline": False}
+            ],
+            "footer": {"text": "Fedrix Clan Disciplinary System • Thenga Network"},
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+        asyncio.create_task(send_discord_notification(LIBRA_ACTIONS_CHANNEL_ID, embed))
+
     return web.json_response(res)
 
 async def api_libra_member_clear_warn(request: web.Request):
@@ -4230,16 +4398,34 @@ async def api_libra_member_clear_warn(request: web.Request):
         return web.json_response({"success": False, "error": "Member ID required."})
 
     conn = db.get_connection()
-    m = conn.execute("SELECT rank_level, name FROM libra_members WHERE id = ?", (member_id,)).fetchone()
+    m = conn.execute("SELECT rank_level, rank_name, name FROM libra_members WHERE id = ?", (member_id,)).fetchone()
     conn.close()
     if not m:
         return web.json_response({"success": False, "error": "Member not found"})
 
     target_level = m["rank_level"]
+    target_rank = m["rank_name"] or f"Lv {target_level}"
     if not db.user_can_manage_libra(user, target_level):
         return web.json_response({"success": False, "error": f"You do not have permission to clear warnings for {m['name']}."})
 
     db.clear_libra_warnings(member_id)
+
+    actor_mention = f"<@{user['id']}>" if str(user.get("id", "")).isdigit() and len(str(user["id"])) > 10 else f"**@{user['username']}**"
+    embed = {
+        "title": "🔄 Libra RP Warnings Reset / Cleared",
+        "description": f"All active warnings for **{m['name']}** (`ID #{member_id}`) have been cleared to **0/3 CLEAN** via Web Dashboard.",
+        "color": 0x22c55e,
+        "fields": [
+            {"name": "👤 Operative", "value": f"**{m['name']}** (`ID #{member_id}`)", "inline": True},
+            {"name": "🎖️ Clan Rank", "value": f"Lv {target_level} {target_rank}", "inline": True},
+            {"name": "📊 Disciplinary Standing", "value": "**0 / 3 Strikes (Clean Record)**", "inline": True},
+            {"name": "🛡️ Cleared By", "value": f"{actor_mention} (`{user['username']}`)", "inline": False}
+        ],
+        "footer": {"text": "Fedrix Clan Disciplinary System • Thenga Network"},
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+    asyncio.create_task(send_discord_notification(LIBRA_ACTIONS_CHANNEL_ID, embed))
+
     return web.json_response({"success": True})
 
 async def api_libra_member_warnings(request: web.Request):
@@ -4288,7 +4474,11 @@ async def handle_logo(request: web.Request):
         return web.FileResponse(logo_path)
     return web.Response(status=404)
 
-def create_web_app():
+def create_web_app(bot=None):
+    global _BOT_INSTANCE
+    if bot:
+        _BOT_INSTANCE = bot
+
     app = web.Application()
 
     # Static Assets & Pages
