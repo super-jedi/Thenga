@@ -175,6 +175,17 @@ def init_db():
         VALUES ('librarp', 'Cartel War', '02:30', 'Location: #17 Grand Senora Desert (Radius: 150m) • Daily Limit: 3/24 [21:30 ET]', NULL, 0)
         """)
 
+    # 5. User Profiles (GrandRP and LibraRP Ranks)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS user_profiles (
+        user_id TEXT PRIMARY KEY,
+        username TEXT NOT NULL,
+        grand_rank TEXT DEFAULT 'Member (Rank 1)',
+        libra_rank TEXT DEFAULT 'Associate (Rank 1)',
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+
     conn.commit()
     conn.close()
 
@@ -370,6 +381,36 @@ def remove_event(event_id: int) -> bool:
     conn.commit()
     conn.close()
     return affected
+
+# ==================== USER PROFILE & RANKS ====================
+
+def get_user_profile(user_id: str, username: str = "Member") -> Dict[str, Any]:
+    conn = get_connection()
+    row = conn.execute("SELECT * FROM user_profiles WHERE user_id = ?", (str(user_id),)).fetchone()
+    if not row:
+        # Default ranks: if superjedi or founder, give High Command / Boss
+        is_founder = "superjedi" in username.lower()
+        default_grand = "Leader / High Command (Rank 10)" if is_founder else "Family Member (Rank 1)"
+        default_libra = "Fedrix Boss (Rank 9)" if is_founder else "Fedrix Associate (Rank 1)"
+        conn.execute("""
+        INSERT OR IGNORE INTO user_profiles (user_id, username, grand_rank, libra_rank)
+        VALUES (?, ?, ?, ?)
+        """, (str(user_id), username, default_grand, default_libra))
+        conn.commit()
+        row = conn.execute("SELECT * FROM user_profiles WHERE user_id = ?", (str(user_id),)).fetchone()
+    conn.close()
+    return dict(row)
+
+def update_user_ranks(user_id: str, grand_rank: str, libra_rank: str) -> bool:
+    conn = get_connection()
+    conn.execute("""
+    UPDATE user_profiles
+    SET grand_rank = ?, libra_rank = ?, updated_at = CURRENT_TIMESTAMP
+    WHERE user_id = ?
+    """, (grand_rank.strip(), libra_rank.strip(), str(user_id)))
+    conn.commit()
+    conn.close()
+    return True
 
 # Initialize database tables on load
 init_db()

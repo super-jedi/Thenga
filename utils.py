@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Optional, Any
 import discord
 
-ADMIN_USERS = [u.strip().lower() for u in os.getenv("ADMIN_USERS", "superjedi,haris_supran,harisupran").split(",") if u.strip()]
+ADMIN_USERS = [u.strip().lower() for u in os.getenv("ADMIN_USERS", "superjedi,superjedi.0257,haris_supran,harisupran").split(",") if u.strip()]
 ADMIN_IDS = [i.strip() for i in os.getenv("ADMIN_IDS", "1567865230829035530").split(",") if i.strip()]
 
 def is_admin_user(user: Any) -> bool:
@@ -17,11 +17,11 @@ def is_admin_user(user: Any) -> bool:
     if isinstance(user, dict):
         uname = str(user.get("username", "")).lower()
         uid = str(user.get("id", ""))
-        return uname in ADMIN_USERS or uid in ADMIN_IDS
+    else:
+        uname = str(getattr(user, "name", "") or getattr(user, "display_name", "")).lower()
+        uid = str(getattr(user, "id", ""))
     
-    uname = getattr(user, "name", "") or getattr(user, "display_name", "")
-    uid = str(getattr(user, "id", ""))
-    if uname.lower() in ADMIN_USERS or uid in ADMIN_IDS:
+    if any(adm in uname for adm in ADMIN_USERS) or uid in ADMIN_IDS:
         return True
     
     perms = getattr(user, "guild_permissions", None)

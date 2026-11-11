@@ -354,82 +354,205 @@ async def handle_home(request: web.Request):
     libra_bal = db.get_bank_balance("librarp")
     grand_v = db.get_vehicles("grandrp")
     libra_v = db.get_vehicles("librarp")
+    profile = db.get_user_profile(user["id"], user["username"])
+    is_adm = is_admin_user(user)
+
+    role_badge = (
+        '<span class="badge badge-red" style="font-size: 11px; padding: 3px 10px;">👑 FOUNDER / COMMANDER</span>'
+        if is_adm else
+        '<span class="badge badge-green" style="font-size: 11px; padding: 3px 10px;">VERIFIED OPERATIVE</span>'
+    )
 
     html = f"""
     <!DOCTYPE html>
     <html>
-        <head><title>Operations Hub • Thenga Network</title><style>{COMMON_CSS}</style></head>
+        <head>
+            <title>Operations Hub • Thenga Network</title>
+            <style>
+                {COMMON_CSS}
+                @media (max-width: 950px) {{
+                    .hub-layout {{ grid-template-columns: 1fr !important; }}
+                    .hub-grid {{ grid-template-columns: 1fr !important; }}
+                }}
+            </style>
+        </head>
         <body>
             {render_header(user)}
 
-            <main style="max-width: 960px; margin: 40px auto; width: 100%; padding: 0 20px;">
-                <div style="text-align: center; margin-bottom: 36px;">
-                    <div style="margin-bottom: 12px;">
-                        <img src="/logo.png" alt="Thenga Logo" style="width: 84px; height: auto; filter: drop-shadow(0 4px 16px rgba(239, 68, 68, 0.45));">
+            <main style="max-width: 1300px; margin: 32px auto; width: 100%; padding: 0 24px;">
+                <div class="hub-layout" style="display: grid; grid-template-columns: 1fr 340px; gap: 30px; align-items: start;">
+                    
+                    <!-- LEFT COLUMN: OPERATIONS COMMAND & SERVER SELECTOR -->
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 28px;">
+                            <img src="/logo.png" alt="Thenga Logo" style="width: 72px; height: auto; filter: drop-shadow(0 4px 16px rgba(239, 68, 68, 0.45));">
+                            <div>
+                                <div style="font-size: 11px; font-weight: 800; color: var(--accent); letter-spacing: 1.5px; text-transform: uppercase;">Thenga Network Malayali Club</div>
+                                <h1 style="font-size: 28px; font-weight: 900; color: #fff; letter-spacing: -0.5px; margin-top: 2px;">FAMILY OPERATIONS COMMAND</h1>
+                                <p style="color: var(--text-secondary); margin-top: 4px; font-size: 14px;">Select active GTA RP server operations dashboard</p>
+                            </div>
+                        </div>
+
+                        <div class="hub-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <!-- Grand RP Card -->
+                            <a href="/grand" style="text-decoration: none; color: inherit;">
+                                <div class="card" style="cursor: pointer; transition: transform 0.2s, border-color 0.2s; border-color: #3b82f6; height: 100%; display: flex; flex-direction: column; justify-content: space-between;" onmouseover="this.style.transform='translateY(-4px)'" onmouseout="this.style.transform='none'">
+                                    <div>
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                                            <span style="font-size: 32px;">🌆</span>
+                                            <span class="badge badge-green">3% / 5% Tax</span>
+                                        </div>
+                                        <h2 style="font-size: 24px; color: #60a5fa; margin-bottom: 8px; font-weight: 900;">Grand RP (EN2)</h2>
+                                        <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 20px;">
+                                            Manage Family Fund, 31 Vehicles, and Pineapple Plantation Business.
+                                        </p>
+                                    </div>
+                                    <div style="border-top: 1px solid var(--card-border); padding-top: 16px; display: flex; justify-content: space-between;">
+                                        <div>
+                                            <div class="stat-label">Treasury</div>
+                                            <div style="font-weight: 800; color: #22c55e; font-size: 16px;">{format_money(grand_bal['balance'])}</div>
+                                        </div>
+                                        <div>
+                                            <div class="stat-label">Fleet</div>
+                                            <div style="font-weight: 800; color: #fff; font-size: 16px;">{len(grand_v)} Cars</div>
+                                        </div>
+                                        <div>
+                                            <div class="stat-label">Plantation</div>
+                                            <div style="font-weight: 800; color: #34d399; font-size: 16px;">Pineapple</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </a>
+
+                            <!-- Libra RP Card -->
+                            <a href="/libra" style="text-decoration: none; color: inherit;">
+                                <div class="card" style="cursor: pointer; transition: transform 0.2s, border-color 0.2s; border-color: #a855f7; height: 100%; display: flex; flex-direction: column; justify-content: space-between;" onmouseover="this.style.transform='translateY(-4px)'" onmouseout="this.style.transform='none'">
+                                    <div>
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                                            <span style="font-size: 32px;">⚖️</span>
+                                            <span class="badge badge-purple">0% Tax • Active</span>
+                                        </div>
+                                        <h2 style="font-size: 24px; color: #c084fc; margin-bottom: 8px; font-weight: 900;">Libra RP (Fedrix)</h2>
+                                        <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 20px;">
+                                            Manage Fedrix Clan Bank, 24 Vehicles, and Daily Events Radar.
+                                        </p>
+                                    </div>
+                                    <div style="border-top: 1px solid var(--card-border); padding-top: 16px; display: flex; justify-content: space-between;">
+                                        <div>
+                                            <div class="stat-label">Treasury</div>
+                                            <div style="font-weight: 800; color: #22c55e; font-size: 16px;">{format_money(libra_bal['balance'])}</div>
+                                        </div>
+                                        <div>
+                                            <div class="stat-label">Fleet</div>
+                                            <div style="font-weight: 800; color: #fff; font-size: 16px;">{len(libra_v)} Cars</div>
+                                        </div>
+                                        <div>
+                                            <div class="stat-label">Events</div>
+                                            <div style="font-weight: 800; color: #c084fc; font-size: 16px;">3 Scheduled</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
                     </div>
-                    <div style="font-size: 12px; font-weight: 800; color: var(--accent); letter-spacing: 1.5px; text-transform: uppercase;">Thenga Network Malayali Club</div>
-                    <h1 style="font-size: 32px; font-weight: 900; color: #fff; margin-top: 4px; letter-spacing: -0.5px;">FAMILY OPERATIONS COMMAND</h1>
-                    <p style="color: var(--text-secondary); margin-top: 6px; font-size: 15px;">Select active GTA RP server operations dashboard</p>
-                </div>
 
-                <div class="grid-2">
-                    <!-- Grand RP Card -->
-                    <a href="/grand" style="text-decoration: none; color: inherit;">
-                        <div class="card" style="cursor: pointer; transition: transform 0.2s, border-color 0.2s; border-color: #3b82f6;" onmouseover="this.style.transform='translateY(-4px)'" onmouseout="this.style.transform='none'">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                                <span style="font-size: 32px;">🌆</span>
-                                <span class="badge badge-green">3% / 5% Tax</span>
+                    <!-- RIGHT COLUMN: VERTICAL USER INFO & IN-GAME RANKS TAB -->
+                    <aside class="card" style="border: 1.5px solid rgba(239, 68, 68, 0.35); box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+                        <!-- User Avatar & Identity -->
+                        <div style="text-align: center; padding-bottom: 20px; border-bottom: 1px solid var(--card-border);">
+                            <div style="position: relative; display: inline-block; margin-bottom: 12px;">
+                                <img src="{user['avatar_url']}" style="width: 76px; height: 76px; border-radius: 50%; border: 2.5px solid var(--accent); box-shadow: 0 0 20px var(--accent-glow);">
+                                <span style="position: absolute; bottom: 2px; right: 2px; width: 14px; height: 14px; background: #22c55e; border: 2.5px solid var(--card-bg); border-radius: 50%;"></span>
                             </div>
-                            <h2 style="font-size: 24px; color: #60a5fa; margin-bottom: 8px;">Grand RP (EN2)</h2>
-                            <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 20px;">
-                                Manage Family Fund, 31 Vehicles, and Pineapple Plantation Business.
-                            </p>
-                            <div style="border-top: 1px solid var(--card-border); padding-top: 16px; display: flex; justify-content: space-between;">
+                            <h3 style="color: #fff; font-size: 18px; font-weight: 900; margin-bottom: 6px;">{user['username']}</h3>
+                            {role_badge}
+                        </div>
+
+                        <!-- In-Game Ranks Vertical Section -->
+                        <div style="padding-top: 20px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                                <span class="stat-label" style="font-size: 11px;">IN-GAME DOSSIER</span>
+                                <button onclick="toggleEditRanks()" style="background: none; border: none; color: var(--accent); font-size: 12px; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                                    ✏️ Edit Ranks
+                                </button>
+                            </div>
+
+                            <!-- Grand RP Rank -->
+                            <div style="background: #090a0f; border: 1px solid #1e222d; border-left: 3px solid #3b82f6; border-radius: 10px; padding: 14px; margin-bottom: 12px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                    <span style="font-size: 12px; font-weight: 800; color: #60a5fa;">🌆 Grand RP (EN2)</span>
+                                    <span class="badge" style="background: rgba(59, 130, 246, 0.15); color: #93c5fd; font-size: 10px; padding: 2px 6px;">EN2 Family</span>
+                                </div>
+                                <div id="grand-rank-display" style="font-size: 14px; font-weight: 800; color: #fff; margin-top: 2px;">{profile['grand_rank']}</div>
+                            </div>
+
+                            <!-- Libra RP Rank -->
+                            <div style="background: #090a0f; border: 1px solid #1e222d; border-left: 3px solid #a855f7; border-radius: 10px; padding: 14px; margin-bottom: 16px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                    <span style="font-size: 12px; font-weight: 800; color: #c084fc;">⚖️ Libra RP (Fedrix)</span>
+                                    <span class="badge" style="background: rgba(168, 85, 247, 0.15); color: #d8b4fe; font-size: 10px; padding: 2px 6px;">Fedrix Clan</span>
+                                </div>
+                                <div id="libra-rank-display" style="font-size: 14px; font-weight: 800; color: #fff; margin-top: 2px;">{profile['libra_rank']}</div>
+                            </div>
+
+                            <!-- Rank Edit Form (Hidden by default) -->
+                            <div id="rank-edit-box" style="display: none; background: #0c0e15; border: 1px dashed var(--accent); border-radius: 10px; padding: 14px; margin-bottom: 16px;">
+                                <label style="font-size: 11px; font-weight: 800; color: var(--text-secondary); text-transform: uppercase;">Grand RP Rank:</label>
+                                <input id="input-grand-rank" type="text" value="{profile['grand_rank']}" style="padding: 8px 12px; font-size: 13px; margin: 4px 0 10px;">
+                                
+                                <label style="font-size: 11px; font-weight: 800; color: var(--text-secondary); text-transform: uppercase;">Libra RP Rank:</label>
+                                <input id="input-libra-rank" type="text" value="{profile['libra_rank']}" style="padding: 8px 12px; font-size: 13px; margin: 4px 0 12px;">
+                                
+                                <div style="display: flex; gap: 8px;">
+                                    <button class="btn btn-primary" style="flex: 1; padding: 8px; font-size: 12px;" onclick="saveUserRanks()">Save</button>
+                                    <button class="btn btn-secondary" style="padding: 8px 12px; font-size: 12px;" onclick="toggleEditRanks()">Cancel</button>
+                                </div>
+                            </div>
+
+                            <!-- Quick Stats -->
+                            <div style="border-top: 1px solid var(--card-border); padding-top: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: center;">
                                 <div>
-                                    <div class="stat-label">Treasury</div>
-                                    <div style="font-weight: 700; color: #fff; font-size: 16px;">{format_money(grand_bal['balance'])}</div>
+                                    <div class="stat-label" style="font-size: 10px;">Network Funds</div>
+                                    <div style="font-size: 15px; font-weight: 800; color: #22c55e; margin-top: 2px;">{format_money(grand_bal['balance'] + libra_bal['balance'])}</div>
                                 </div>
                                 <div>
-                                    <div class="stat-label">Fleet</div>
-                                    <div style="font-weight: 700; color: #fff; font-size: 16px;">{len(grand_v)} Cars</div>
-                                </div>
-                                <div>
-                                    <div class="stat-label">Plantation</div>
-                                    <div style="font-weight: 700; color: #34d399; font-size: 16px;">Pineapple</div>
+                                    <div class="stat-label" style="font-size: 10px;">Active Fleet</div>
+                                    <div style="font-size: 15px; font-weight: 800; color: #fff; margin-top: 2px;">{len(grand_v) + len(libra_v)} Cars</div>
                                 </div>
                             </div>
                         </div>
-                    </a>
-
-                    <!-- Libra RP Card -->
-                    <a href="/libra" style="text-decoration: none; color: inherit;">
-                        <div class="card" style="cursor: pointer; transition: transform 0.2s, border-color 0.2s; border-color: #a855f7;" onmouseover="this.style.transform='translateY(-4px)'" onmouseout="this.style.transform='none'">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                                <span style="font-size: 32px;">⚖️</span>
-                                <span class="badge badge-purple">0% Tax • Active</span>
-                            </div>
-                            <h2 style="font-size: 24px; color: #c084fc; margin-bottom: 8px;">Libra RP (Fedrix)</h2>
-                            <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 20px;">
-                                Manage Fedrix Clan Bank, 24 Vehicles, and Daily Events Radar.
-                            </p>
-                            <div style="border-top: 1px solid var(--card-border); padding-top: 16px; display: flex; justify-content: space-between;">
-                                <div>
-                                    <div class="stat-label">Treasury</div>
-                                    <div style="font-weight: 700; color: #fff; font-size: 16px;">{format_money(libra_bal['balance'])}</div>
-                                </div>
-                                <div>
-                                    <div class="stat-label">Fleet</div>
-                                    <div style="font-weight: 700; color: #fff; font-size: 16px;">{len(libra_v)} Cars</div>
-                                </div>
-                                <div>
-                                    <div class="stat-label">Events</div>
-                                    <div style="font-weight: 700; color: #c084fc; font-size: 16px;">3 Scheduled</div>
-                                </div>
-                            </div>
-                        </div>
-                    </a>
+                    </aside>
                 </div>
             </main>
+
+            <script>
+                function toggleEditRanks() {{
+                    var box = document.getElementById('rank-edit-box');
+                    box.style.display = box.style.display === 'none' ? 'block' : 'none';
+                }}
+
+                async function saveUserRanks() {{
+                    var grand = document.getElementById('input-grand-rank').value;
+                    var libra = document.getElementById('input-libra-rank').value;
+                    try {{
+                        var res = await fetch('/api/user/rank', {{
+                            method: 'POST',
+                            headers: {{'Content-Type': 'application/json'}},
+                            body: JSON.stringify({{grand_rank: grand, libra_rank: libra}})
+                        }});
+                        var data = await res.json();
+                        if (data.success) {{
+                            document.getElementById('grand-rank-display').innerText = data.grand_rank;
+                            document.getElementById('libra-rank-display').innerText = data.libra_rank;
+                            toggleEditRanks();
+                        }} else {{
+                            alert(data.error || 'Failed to update ranks');
+                        }}
+                    }} catch (e) {{
+                        alert('Error saving ranks: ' + e);
+                    }}
+                }}
+            </script>
         </body>
     </html>
     """
@@ -1109,6 +1232,14 @@ async def api_event_remove(request: web.Request):
     success = db.remove_event(data.get("event_id"))
     return web.json_response({"success": success})
 
+async def api_update_user_rank(request: web.Request):
+    user = require_user(request)
+    data = await request.json()
+    grand_rank = data.get("grand_rank", "").strip() or "Member (Rank 1)"
+    libra_rank = data.get("libra_rank", "").strip() or "Associate (Rank 1)"
+    db.update_user_ranks(user["id"], grand_rank, libra_rank)
+    return web.json_response({"success": True, "grand_rank": grand_rank, "libra_rank": libra_rank})
+
 async def handle_logo(request: web.Request):
     logo_path = os.path.join(os.path.dirname(__file__), "static", "logo.png")
     if os.path.exists(logo_path):
@@ -1140,5 +1271,6 @@ def create_web_app():
     app.router.add_post("/api/plantation/nourish", api_plantation_nourish)
     app.router.add_post("/api/plantation/harvest", api_plantation_harvest)
     app.router.add_post("/api/event/remove", api_event_remove)
+    app.router.add_post("/api/user/rank", api_update_user_rank)
 
     return app
