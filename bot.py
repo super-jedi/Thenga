@@ -40,10 +40,18 @@ async def on_ready():
         print(f" - {g.name} (ID: {g.id})")
     print("==================================================")
 
-    # Sync Slash Commands across all servers
+    # Sync Slash Commands across all servers (Global + Instant Guild Sync)
     try:
         synced = await bot.tree.sync()
-        print(f"Synced {len(synced)} slash command(s) successfully.")
+        print(f"Synced {len(synced)} global slash command(s).")
+
+        for g in bot.guilds:
+            try:
+                bot.tree.copy_global_to(guild=g)
+                g_synced = await bot.tree.sync(guild=g)
+                print(f"Instant synced {len(g_synced)} slash command(s) to '{g.name}' (ID: {g.id}).")
+            except Exception as ge:
+                print(f"Warning: Could not sync to guild '{g.name}': {ge}")
     except Exception as e:
         print(f"Error syncing slash commands: {e}")
 
