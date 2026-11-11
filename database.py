@@ -182,9 +182,84 @@ def init_db():
         username TEXT NOT NULL,
         grand_rank TEXT DEFAULT 'Member (Rank 1)',
         libra_rank TEXT DEFAULT 'Associate (Rank 1)',
+        libra_member_id INTEGER,
+        grand_member_name TEXT,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """)
+
+    # 6. Libra RP Ranks Hierarchy
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS libra_ranks (
+        level INTEGER PRIMARY KEY,
+        name TEXT NOT NULL,
+        can_manage BOOLEAN DEFAULT 0
+    )
+    """)
+    rank_count = cursor.execute("SELECT COUNT(*) FROM libra_ranks").fetchone()[0]
+    if rank_count == 0:
+        cursor.executemany("INSERT INTO libra_ranks (level, name, can_manage) VALUES (?, ?, ?)", [
+            (1, 'Leader', 1),
+            (2, 'Co-Leader', 1),
+            (3, 'Supervisor', 1),
+            (4, 'Enforcer', 0),
+            (5, 'Pro', 0),
+            (6, 'Ranger', 0),
+            (7, 'Trainee', 0),
+            (8, 'SUSPENDED', 0),
+            (9, 'VAAZHA', 0),
+            (11, 'GUEST', 0)
+        ])
+
+    # 7. Libra RP Clan Members (Fedrix Roster - 28 Members)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS libra_members (
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL,
+        rank_level INTEGER NOT NULL,
+        rank_name TEXT NOT NULL,
+        last_seen TEXT,
+        is_online BOOLEAN DEFAULT 0,
+        discord_id TEXT,
+        discord_username TEXT
+    )
+    """)
+    member_count = cursor.execute("SELECT COUNT(*) FROM libra_members").fetchone()[0]
+    if member_count == 0:
+        initial_members = [
+            (5392, 'Superjedi Tnga', 2, 'Co-Leader', 'Online now', 1, None, None),
+            (5665, 'Joker Fedrix', 1, 'Leader', '11/10/2026, 11:06:00', 0, None, None),
+            (6377, 'Body Bagger', 2, 'Co-Leader', '11/10/2026, 16:53:48', 0, None, None),
+            (5921, 'Raik Andreev', 2, 'Co-Leader', '11/10/2026, 11:05:12', 0, None, None),
+            (6178, 'Kutteppan Jose', 3, 'Supervisor', '11/10/2026, 13:58:01', 0, None, None),
+            (6301, 'Leo Depaul', 3, 'Supervisor', '11/10/2026, 11:07:37', 0, None, None),
+            (6192, 'Cameo Namboothiri', 4, 'Enforcer', '11/05/2026, 04:19:52', 0, None, None),
+            (6139, 'Fedrix Klaus', 4, 'Enforcer', '10/31/2026, 12:10:50', 0, None, None),
+            (5767, 'George Kutty', 4, 'Enforcer', '11/10/2026, 11:05:48', 0, None, None),
+            (6311, 'John Honai', 4, 'Enforcer', '11/08/2026, 07:13:03', 0, None, None),
+            (207, 'Kraken Valerio', 4, 'Enforcer', '11/10/2026, 21:17:03', 0, None, None),
+            (5740, 'Magudi Das', 4, 'Enforcer', '10/25/2026, 01:41:59', 0, None, None),
+            (5971, 'Rocky Wlxxx', 4, 'Enforcer', '11/10/2026, 12:21:53', 0, None, None),
+            (5701, 'Tom Mathew', 4, 'Enforcer', '11/10/2026, 11:06:16', 0, None, None),
+            (7340, 'Alish Yadav', 5, 'Pro', '10/22/2026, 08:33:23', 0, None, None),
+            (5748, 'Dragon Palley', 5, 'Pro', '11/02/2026, 07:35:09', 0, None, None),
+            (7873, 'Hugh Logan', 5, 'Pro', '10/19/2026, 12:25:47', 0, None, None),
+            (5732, 'Hydhros Alibay', 5, 'Pro', '11/09/2026, 18:20:00', 0, None, None),
+            (5988, 'Mgc Abu', 5, 'Pro', '11/08/2026, 20:15:00', 0, None, None),
+            (6436, 'Reacher Blake', 5, 'Pro', '11/07/2026, 14:10:00', 0, None, None),
+            (5797, 'Speedy White', 5, 'Pro', '11/09/2026, 22:45:00', 0, None, None),
+            (8017, 'Starkz Boy', 5, 'Pro', '11/06/2026, 16:30:00', 0, None, None),
+            (7583, 'Sukumara Kurup', 5, 'Pro', '11/10/2026, 19:05:00', 0, None, None),
+            (5807, 'Kakarot Gaming', 6, 'Ranger', '11/05/2026, 11:00:00', 0, None, None),
+            (10896, 'Karma Nyx', 6, 'Ranger', '11/04/2026, 13:22:00', 0, None, None),
+            (8131, 'Kassia Valenti', 6, 'Ranger', '11/03/2026, 15:40:00', 0, None, None),
+            (10617, 'Veek Sticky', 6, 'Ranger', '11/08/2026, 17:50:00', 0, None, None),
+            (11024, 'Rsz Steve', 11, 'GUEST', '11/01/2026, 09:12:00', 0, None, None)
+        ]
+        cursor.executemany("""
+        INSERT INTO libra_members (id, name, rank_level, rank_name, last_seen, is_online, discord_id, discord_username)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, initial_members)
 
     conn.commit()
     conn.close()
@@ -387,17 +462,27 @@ def remove_event(event_id: int) -> bool:
 def get_user_profile(user_id: str, username: str = "Member") -> Dict[str, Any]:
     conn = get_connection()
     row = conn.execute("SELECT * FROM user_profiles WHERE user_id = ?", (str(user_id),)).fetchone()
+    is_founder = "superjedi" in username.lower()
+    
     if not row:
-        # Default ranks: if superjedi or founder, give High Command / Boss
-        is_founder = "superjedi" in username.lower()
         default_grand = "Leader / High Command (Rank 10)" if is_founder else "Family Member (Rank 1)"
-        default_libra = "Fedrix Boss (Rank 9)" if is_founder else "Fedrix Associate (Rank 1)"
+        default_libra = "Lv 2 Co-Leader" if is_founder else "Fedrix Associate (Rank 1)"
+        libra_id = 5392 if is_founder else None
         conn.execute("""
-        INSERT OR IGNORE INTO user_profiles (user_id, username, grand_rank, libra_rank)
-        VALUES (?, ?, ?, ?)
-        """, (str(user_id), username, default_grand, default_libra))
+        INSERT OR IGNORE INTO user_profiles (user_id, username, grand_rank, libra_rank, libra_member_id, grand_member_name)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """, (str(user_id), username, default_grand, default_libra, libra_id, "Superjedi Tnga" if is_founder else username))
         conn.commit()
         row = conn.execute("SELECT * FROM user_profiles WHERE user_id = ?", (str(user_id),)).fetchone()
+
+    if is_founder:
+        conn.execute("""
+        UPDATE libra_members
+        SET discord_id = ?, discord_username = ?
+        WHERE id = 5392 AND (discord_id IS NULL OR discord_id != ?)
+        """, (str(user_id), username, str(user_id)))
+        conn.commit()
+
     conn.close()
     return dict(row)
 
@@ -410,6 +495,138 @@ def update_user_ranks(user_id: str, grand_rank: str, libra_rank: str) -> bool:
     """, (grand_rank.strip(), libra_rank.strip(), str(user_id)))
     conn.commit()
     conn.close()
+    return True
+
+# ==================== LIBRA FEDRIX ROSTER & MANAGEMENT ====================
+
+def get_libra_members() -> List[Dict[str, Any]]:
+    conn = get_connection()
+    rows = conn.execute("SELECT * FROM libra_members ORDER BY is_online DESC, rank_level ASC, name ASC").fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+def get_libra_ranks() -> List[Dict[str, Any]]:
+    conn = get_connection()
+    rows = conn.execute("SELECT * FROM libra_ranks ORDER BY level ASC").fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+def get_libra_member_by_discord(discord_id: str) -> Optional[Dict[str, Any]]:
+    conn = get_connection()
+    row = conn.execute("SELECT * FROM libra_members WHERE discord_id = ?", (str(discord_id),)).fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+def link_libra_member(member_id: int, discord_id: str, discord_username: str) -> bool:
+    conn = get_connection()
+    conn.execute("UPDATE libra_members SET discord_id = NULL, discord_username = NULL WHERE discord_id = ?", (str(discord_id),))
+    conn.execute("""
+    UPDATE libra_members
+    SET discord_id = ?, discord_username = ?
+    WHERE id = ?
+    """, (str(discord_id), discord_username, int(member_id)))
+    m = conn.execute("SELECT * FROM libra_members WHERE id = ?", (int(member_id),)).fetchone()
+    if m:
+        rank_str = f"Lv {m['rank_level']} {m['rank_name']}"
+        conn.execute("""
+        UPDATE user_profiles
+        SET libra_rank = ?, libra_member_id = ?, username = ?
+        WHERE user_id = ?
+        """, (rank_str, int(member_id), discord_username, str(discord_id)))
+    conn.commit()
+    conn.close()
+    return True
+
+def link_user_profiles(user_id: str, username: str, libra_member_id: Optional[int], grand_name: str, grand_rank: str) -> bool:
+    conn = get_connection()
+    libra_rank_str = "Associate (Rank 1)"
+    if libra_member_id:
+        conn.execute("UPDATE libra_members SET discord_id = NULL, discord_username = NULL WHERE discord_id = ?", (str(user_id),))
+        conn.execute("""
+        UPDATE libra_members
+        SET discord_id = ?, discord_username = ?
+        WHERE id = ?
+        """, (str(user_id), username, int(libra_member_id)))
+        m = conn.execute("SELECT * FROM libra_members WHERE id = ?", (int(libra_member_id),)).fetchone()
+        if m:
+            libra_rank_str = f"Lv {m['rank_level']} {m['rank_name']}"
+
+    conn.execute("""
+    INSERT INTO user_profiles (user_id, username, grand_rank, libra_rank, libra_member_id, grand_member_name, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    ON CONFLICT(user_id) DO UPDATE SET
+        username = excluded.username,
+        grand_rank = excluded.grand_rank,
+        libra_rank = excluded.libra_rank,
+        libra_member_id = excluded.libra_member_id,
+        grand_member_name = excluded.grand_member_name,
+        updated_at = CURRENT_TIMESTAMP
+    """, (str(user_id), username, grand_rank, libra_rank_str, libra_member_id, grand_name))
+
+    conn.commit()
+    conn.close()
+    return True
+
+def add_libra_member(member_id: int, name: str, rank_level: int, rank_name: str, last_seen: str = "Just joined") -> bool:
+    conn = get_connection()
+    conn.execute("""
+    INSERT OR REPLACE INTO libra_members (id, name, rank_level, rank_name, last_seen, is_online, discord_id, discord_username)
+    VALUES (?, ?, ?, ?, ?, 0, NULL, NULL)
+    """, (int(member_id), name.strip(), int(rank_level), rank_name.strip(), last_seen))
+    conn.commit()
+    conn.close()
+    return True
+
+def update_libra_member_rank(member_id: int, new_level: int, new_rank_name: str) -> bool:
+    conn = get_connection()
+    conn.execute("""
+    UPDATE libra_members
+    SET rank_level = ?, rank_name = ?
+    WHERE id = ?
+    """, (int(new_level), new_rank_name, int(member_id)))
+    m = conn.execute("SELECT * FROM libra_members WHERE id = ?", (int(member_id),)).fetchone()
+    if m and m['discord_id']:
+        rank_str = f"Lv {new_level} {new_rank_name}"
+        conn.execute("UPDATE user_profiles SET libra_rank = ? WHERE user_id = ?", (rank_str, str(m['discord_id'])))
+    conn.commit()
+    conn.close()
+    return True
+
+def kick_libra_member(member_id: int) -> bool:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM libra_members WHERE id = ?", (int(member_id),))
+    affected = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return affected
+
+def user_can_manage_libra(user: dict, target_level: Optional[int] = None) -> bool:
+    """
+    Returns True if user has permission to manage Libra clan members.
+    If target_level is specified, enforces that user's rank is strictly higher
+    (lower number) than the target, except Founder/Admin who can manage any rank.
+    """
+    if not user:
+        return False
+    from utils import is_admin_user
+    if is_admin_user(user):
+        return True
+    
+    conn = get_connection()
+    row = conn.execute("SELECT rank_level FROM libra_members WHERE discord_id = ?", (str(user.get("id")),)).fetchone()
+    conn.close()
+    if not row:
+        return False
+    
+    actor_level = row['rank_level']
+    if actor_level not in [1, 2, 3]:
+        return False
+    
+    if target_level is not None:
+        # Strictly higher rank (e.g. Lv 1 Leader can manage Lv 2+, Lv 2 Co-Leader can manage Lv 3+, Lv 3 Supervisor can manage Lv 4+)
+        return actor_level < target_level
+    
     return True
 
 # Initialize database tables on load

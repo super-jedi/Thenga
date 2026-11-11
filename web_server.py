@@ -354,8 +354,23 @@ async def handle_home(request: web.Request):
     libra_bal = db.get_bank_balance("librarp")
     grand_v = db.get_vehicles("grandrp")
     libra_v = db.get_vehicles("librarp")
+    members = db.get_libra_members()
     profile = db.get_user_profile(user["id"], user["username"])
     is_adm = is_admin_user(user)
+    is_first_time = (profile.get("libra_member_id") is None)
+
+    # First time member dropdown options
+    member_select_options = '<option value="">-- Choose your in-game character --</option>'
+    for m in members:
+        is_claimed = bool(m.get("discord_id"))
+        suffix = f" (Claimed by @{m['discord_username']})" if is_claimed else ""
+        selected = 'selected' if profile.get('libra_member_id') == m['id'] else ''
+        mid = m['id']
+        mname = m['name']
+        mlvl = m['rank_level']
+        mrname = m['rank_name']
+        member_select_options += f'<option value="{mid}" {selected}>{mname} (ID {mid} • Lv {mlvl} {mrname}){suffix}</option>'
+    member_select_options += '<option value="0">I am a new recruit / not on this roster</option>'
 
     role_badge = (
         '<span class="badge badge-red" style="font-size: 11px; padding: 3px 10px;">👑 FOUNDER / COMMANDER</span>'
@@ -510,7 +525,7 @@ async def handle_home(request: web.Request):
                             </div>
 
                             <!-- Quick Stats -->
-                            <div style="border-top: 1px solid var(--card-border); padding-top: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: center;">
+                            <div style="border-top: 1px solid var(--card-border); padding-top: 16px; margin-bottom: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: center;">
                                 <div>
                                     <div class="stat-label" style="font-size: 10px;">Network Funds</div>
                                     <div style="font-size: 15px; font-weight: 800; color: #22c55e; margin-top: 2px;">{format_money(grand_bal['balance'] + libra_bal['balance'])}</div>
@@ -520,15 +535,90 @@ async def handle_home(request: web.Request):
                                     <div style="font-size: 15px; font-weight: 800; color: #fff; margin-top: 2px;">{len(grand_v) + len(libra_v)} Cars</div>
                                 </div>
                             </div>
+
+                            <button onclick="openProfileModal()" class="btn btn-primary" style="width: 100%; padding: 10px; font-size: 12px; background: linear-gradient(135deg, #ef4444 0%, #a855f7 100%);">
+                                🔗 Connect In-Game Personas
+                            </button>
                         </div>
                     </aside>
                 </div>
             </main>
 
+            <!-- FIRST-TIME / LINK PROFILE MODAL -->
+            <div id="profileModal" style="display: {"flex" if is_first_time else "none"}; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(6px); z-index: 9999; justify-content: center; align-items: center; padding: 20px;">
+                <div class="card" style="max-width: 500px; width: 100%; border: 1.5px solid var(--accent); box-shadow: 0 16px 50px rgba(0,0,0,0.85); border-radius: 16px;">
+                    <div style="text-align: center; margin-bottom: 18px;">
+                        <img src="/logo.png" style="width: 64px; height: auto; filter: drop-shadow(0 4px 12px rgba(239,68,68,0.5));">
+                        <h2 style="color: #fff; font-size: 20px; font-weight: 900; margin-top: 10px; text-transform: uppercase;">
+                            Connect Your In-Game Operatives
+                        </h2>
+                        <p style="color: #94a3b8; font-size: 13px; margin-top: 4px;">
+                            Link your Discord account to your Grand RP & Libra RP characters
+                        </p>
+                    </div>
+
+                    <!-- Libra RP Select -->
+                    <div style="background: #090a0f; border: 1px solid #1a1e2b; border-left: 3px solid #a855f7; border-radius: 8px; padding: 12px; margin-bottom: 14px;">
+                        <label style="font-size: 11px; font-weight: 800; color: #c084fc; text-transform: uppercase;">⚖️ Libra RP (Fedrix Clan Character):</label>
+                        <select id="link-libra-id" style="margin-top: 6px; margin-bottom: 4px;">
+                            {member_select_options}
+                        </select>
+                        <span style="font-size: 11px; color: #64748b;">Select your in-game clan identity from the 28 seeded members</span>
+                    </div>
+
+                    <!-- Grand RP Input -->
+                    <div style="background: #090a0f; border: 1px solid #1a1e2b; border-left: 3px solid #3b82f6; border-radius: 8px; padding: 12px; margin-bottom: 20px;">
+                        <label style="font-size: 11px; font-weight: 800; color: #60a5fa; text-transform: uppercase;">🌆 Grand RP (EN2 Character):</label>
+                        <input id="link-grand-name" type="text" value="{profile.get('grand_member_name') or user['username']}" placeholder="Character Name (e.g. Haris Thenga)" style="margin-top: 6px; margin-bottom: 8px;">
+                        
+                        <label style="font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase;">Grand RP Rank:</label>
+                        <select id="link-grand-rank" style="margin-top: 4px; margin-bottom: 4px;">
+                            <option value="Family Member (Rank 1)">Family Member (Rank 1)</option>
+                            <option value="Enforcer (Rank 3)">Enforcer (Rank 3)</option>
+                            <option value="High Command (Rank 7)">High Command (Rank 7)</option>
+                            <option value="Co-Leader (Rank 9)">Co-Leader (Rank 9)</option>
+                            <option value="Leader / Boss (Rank 10)">Leader / Boss (Rank 10)</option>
+                        </select>
+                    </div>
+
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-primary" style="flex: 1; padding: 12px;" onclick="submitLinkProfiles()">Save & Link Personas</button>
+                        <button class="btn btn-secondary" onclick="closeModal('profileModal')">Later</button>
+                    </div>
+                </div>
+            </div>
+
             <script>
                 function toggleEditRanks() {{
                     var box = document.getElementById('rank-edit-box');
                     box.style.display = box.style.display === 'none' ? 'block' : 'none';
+                }}
+
+                function openProfileModal() {{
+                    document.getElementById('profileModal').style.display = 'flex';
+                }}
+
+                function closeModal(id) {{
+                    document.getElementById(id).style.display = 'none';
+                }}
+
+                async function submitLinkProfiles() {{
+                    let libraId = document.getElementById('link-libra-id').value;
+                    let grandName = document.getElementById('link-grand-name').value;
+                    let grandRank = document.getElementById('link-grand-rank').value;
+
+                    let res = await fetch('/api/user/link_profiles', {{
+                        method: 'POST',
+                        headers: {{'Content-Type': 'application/json'}},
+                        body: JSON.stringify({{ libra_member_id: libraId, grand_name: grandName, grand_rank: grandRank }})
+                    }});
+                    let d = await res.json();
+                    if (d.success) {{
+                        alert("In-game personas successfully linked!");
+                        location.reload();
+                    }} else {{
+                        alert("Error: " + d.error);
+                    }}
                 }}
 
                 async function saveUserRanks() {{
@@ -862,7 +952,7 @@ async def handle_grand(request: web.Request):
     return web.Response(text=html, content_type="text/html")
 
 # ==========================================
-# PAGE 3: LIBRA RP DASHBOARD (/libra)
+# PAGE 3: LIBRA RP DASHBOARD (/libra) - AUTHENTIC IN-GAME CLAN UI
 # ==========================================
 async def handle_libra(request: web.Request):
     user = get_current_user(request)
@@ -870,10 +960,99 @@ async def handle_libra(request: web.Request):
         return web.HTTPFound("/")
 
     bal = db.get_bank_balance("librarp")
-    txs = db.get_recent_transactions("librarp", limit=20)
+    txs = db.get_recent_transactions("librarp", limit=30)
     vehicles = db.get_vehicles("librarp")
     events = db.get_events("librarp")
+    members = db.get_libra_members()
+    ranks = db.get_libra_ranks()
+    profile = db.get_user_profile(user["id"], user["username"])
+    
+    can_manage = db.user_can_manage_libra(user)
+    is_founder = is_admin_user(user)
+    is_first_time = (profile.get("libra_member_id") is None)
 
+    # 1. Build Members Table Rows
+    member_rows = ""
+    for m in members:
+        is_on = bool(m.get("is_online"))
+        dot = '<span class="ingame-dot dot-online" title="Online"></span>' if is_on else '<span class="ingame-dot dot-offline" title="Offline"></span>'
+        last_seen_html = '<span style="color:#22c55e; font-weight:700;">Online now</span>' if is_on else f'<span style="color:#94a3b8;">{m.get("last_seen") or "Unknown"}</span>'
+        
+        discord_badge = ""
+        if m.get("discord_username"):
+            discord_badge = f'<span class="badge" style="background:rgba(88,101,242,0.18); color:#818cf8; border:1px solid rgba(88,101,242,0.4); font-size:10px; margin-left:8px; padding:1px 6px;">@{m["discord_username"]}</span>'
+        
+        # Determine if viewer can manage this member (strictly higher rank or founder)
+        can_edit_this = is_founder or db.user_can_manage_libra(user, m["rank_level"])
+        
+        actions_html = ""
+        if can_edit_this:
+            safe_name = m['name'].replace("'", "\'")
+            actions_html = f'''
+            <button class="ingame-btn-action" onclick="openRankModal({m['id']}, '{safe_name}', {m['rank_level']}, '{m['rank_name']}')">RANK</button>
+            <button class="ingame-btn-action btn-kick" onclick="openKickModal({m['id']}, '{safe_name}', {m['rank_level']})">KICK</button>
+            '''
+        elif not m.get("discord_id") and is_first_time:
+            safe_name = m['name'].replace("'", "\'")
+            actions_html = f'''
+            <button class="ingame-btn-claim" onclick="claimLibraProfile({m['id']}, '{safe_name}')">CLAIM</button>
+            '''
+
+        member_rows += f'''
+        <tr class="member-row" data-id="{m['id']}" data-name="{m['name'].lower()}">
+            <td>
+                <div style="display:flex; align-items:center;">
+                    {dot}
+                    <span style="color:#fff; font-weight:700; font-size:15px;">{m['name']}</span>
+                    <span style="color:#64748b; font-size:12px; margin-left:6px; font-weight:600;">ID {m['id']}</span>
+                    {discord_badge}
+                </div>
+            </td>
+            <td>
+                <span style="color:#94a3b8; font-size:13px; font-weight:700;">Lv {m['rank_level']}</span>
+                <span style="color:#ffffff; font-weight:800; font-size:14px; margin-left:6px;">{m['rank_name']}</span>
+            </td>
+            <td>{last_seen_html}</td>
+            <td style="text-align:right; white-space:nowrap;">{actions_html}</td>
+        </tr>
+        '''
+
+    # 2. Build Ranks Table Rows
+    rank_count_map = {}
+    for m in members:
+        lvl = m["rank_level"]
+        rank_count_map[lvl] = rank_count_map.get(lvl, 0) + 1
+
+    rank_descriptions = {
+        1: "Supreme Commander of Fedrix Clan • Full Governance, Bank, Fleet, and War Command",
+        2: "Executive Leadership • Member Management, Promotions, Clan Operations",
+        3: "High Command Overseer • Roster Supervision, Event Coordination, Fleet Access",
+        4: "Elite Combat Vanguard • Turf Battles, Heavy Weapons, Tier 4+ Fleet",
+        5: "Senior Operative • Active Turf Battles, Heists, Tier 3+ Fleet",
+        6: "Patrol Scout • Recon, Turf Defense, Tier 2+ Fleet Access",
+        7: "Probationary Clan Recruit • Active Trial Period",
+        8: "Disciplinary Action • Action & Weapon Restrictions",
+        9: "Penalized Clan Rank • Demoted / Fun Clan Mascot",
+        11: "Guest / Allied Clan Diplomat • Non-combatant Clan Guest"
+    }
+
+    rank_rows = ""
+    for r in ranks:
+        lvl = r["level"]
+        cnt = rank_count_map.get(lvl, 0)
+        desc = rank_descriptions.get(lvl, "Clan Member")
+        perm_badge = '<span class="badge badge-green" style="font-size:11px;">CAN MANAGE</span>' if r.get("can_manage") else '<span class="badge" style="background:rgba(100,116,139,0.2); color:#94a3b8; border:1px solid #334155; font-size:11px;">MEMBER</span>'
+        rank_rows += f'''
+        <tr>
+            <td style="width:90px;"><span style="color:#94a3b8; font-weight:700;">Level</span> <b style="color:#fff; font-size:16px;">{lvl}</b></td>
+            <td style="width:160px;"><b style="color:#c084fc; font-size:15px;">{r['name']}</b></td>
+            <td><span style="color:#cbd5e1; font-size:13px;">{desc}</span></td>
+            <td style="width:130px;">{perm_badge}</td>
+            <td style="width:110px; text-align:right;"><span class="badge badge-purple" style="font-size:12px;">{cnt} Operative{'s' if cnt != 1 else ''}</span></td>
+        </tr>
+        '''
+
+    # 3. Build Vehicles Rows
     now = datetime.now(timezone.utc)
     veh_rows = ""
     for v in vehicles:
@@ -888,153 +1067,838 @@ async def handle_libra(request: web.Request):
                 exp_txt = exp_dt.strftime("%Y-%m-%d")
 
         badge = '<span class="badge badge-red">EXPIRED</span>' if is_exp else f'<span class="badge badge-green">{exp_txt}</span>'
-        veh_rows += f"""
-        <tr>
-            <td><b>#{v['id']}</b></td>
-            <td><b>{v['name']}</b></td>
-            <td><code>{plate}</code></td>
-            <td><span class="badge badge-purple">{v.get('notes') or 'Rank 1'}</span></td>
+        veh_rows += f'''
+        <tr class="veh-row" data-name="{v['name'].lower()}" data-plate="{plate.lower()}">
+            <td style="color:#64748b; font-weight:700;">#{v['id']}</td>
+            <td><b style="color:#fff; font-size:15px;">{v['name']}</b></td>
+            <td><code style="background:#0a0c12; border:1px solid #272c3d; padding:3px 8px; border-radius:4px; color:#f8fafc; font-weight:800; font-size:13px;">{plate}</code></td>
+            <td><span class="badge badge-purple">{v.get('notes') or 'Rank 1+'}</span></td>
             <td>{badge}</td>
-            <td>
-                <button class="btn btn-primary" style="padding: 4px 10px; font-size: 12px;" onclick="renewVehicle('{v['id']}')">🛡️ +30d</button>
-                <button class="btn btn-red" style="padding: 4px 10px; font-size: 12px;" onclick="removeVehicle('{v['id']}')">🗑️</button>
+            <td style="text-align:right;">
+                <button class="btn btn-secondary" style="padding:4px 10px; font-size:11px;" onclick="renewVehicle('{v['id']}')">🛡️ +30d</button>
+                <button class="btn btn-red" style="padding:4px 10px; font-size:11px; margin-left:4px;" onclick="removeVehicle('{v['id']}')">🗑️</button>
             </td>
         </tr>
-        """
+        '''
 
+    # 4. Build Events Cards
+    event_cards = ""
+    for e in events:
+        event_cards += f'''
+        <div class="card" style="border-left: 4px solid var(--purple); background:#0e1017; border-color:#1e2333;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="color:#c084fc; font-size:18px;">⚔️ {e['name']}</h3>
+                <span class="badge badge-purple" style="font-size:12px;">{e['time_utc']} UTC</span>
+            </div>
+            <p style="color:var(--text-secondary); margin-top:10px; font-size:14px; line-height:1.5;">{e['description']}</p>
+            <div style="margin-top:14px; display:flex; justify-content:space-between; align-items:center;">
+                <span class="badge badge-green" style="font-size:11px;">+Clan Event Points</span>
+                <button class="btn btn-secondary" style="padding:4px 10px; font-size:11px;" onclick="removeEvent({e['id']})">Remove</button>
+            </div>
+        </div>
+        '''
+
+    # 5. Build Transactions Rows
     tx_rows = ""
     for t in txs:
         icon = '<span class="badge badge-green">DEPOSIT</span>' if t['type'] == 'deposit' else '<span class="badge badge-red">WITHDRAW</span>'
-        tx_rows += f"""
+        tx_rows += f'''
         <tr>
             <td>{icon}</td>
-            <td><b>{format_money(t['gross_amount'])}</b></td>
-            <td>{t['user_name']}</td>
-            <td>{t['reason']}</td>
+            <td><b style="color:#fff; font-size:15px;">{format_money(t['gross_amount'])}</b></td>
+            <td><span style="color:#93c5fd; font-weight:700;">{t['user_name']}</span></td>
+            <td style="color:#cbd5e1;">{t['reason']}</td>
             <td style="color:#64748b; font-size:12px;">{t['created_at']}</td>
         </tr>
-        """
+        '''
 
-    event_cards = ""
-    for e in events:
-        event_cards += f"""
-        <div class="card" style="border-left: 4px solid var(--purple);">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h3 style="color:#c084fc;">{e['name']}</h3>
-                <span class="badge badge-purple">{e['time_utc']} UTC</span>
-            </div>
-            <p style="color:var(--text-secondary); margin-top:8px; font-size:14px;">{e['description']}</p>
-            <div style="margin-top:12px; display:flex; justify-content:flex-end; gap:8px;">
-                <button class="btn btn-secondary" style="padding:4px 8px; font-size:12px;" onclick="removeEvent({e['id']})">Remove</button>
-            </div>
-        </div>
-        """
+    # First time member dropdown options
+    member_select_options = '<option value="">-- Choose your in-game character --</option>'
+    for m in members:
+        is_claimed = bool(m.get("discord_id"))
+        suffix = f" (Claimed by @{m['discord_username']})" if is_claimed else ""
+        selected = 'selected' if profile.get('libra_member_id') == m['id'] else ''
+        mid = m['id']
+        mname = m['name']
+        mlvl = m['rank_level']
+        mrname = m['rank_name']
+        member_select_options += f'<option value="{mid}" {selected}>{mname} (ID {mid} • Lv {mlvl} {mrname}){suffix}</option>'
+    member_select_options += '<option value="0">I am a new recruit / not on this roster</option>'
 
-    html = f"""
+    total_m_count = len(members)
+    online_m_count = sum(1 for m in members if m.get("is_online"))
+
+    add_btn_html = '''
+    <button class="btn btn-primary" style="padding:7px 16px; font-size:12px; margin-left:auto;" onclick="openAddMemberModal()">+ Add Member</button>
+    ''' if can_manage else ''
+
+    html = f'''
     <!DOCTYPE html>
     <html>
-        <head><title>Libra RP (Fedrix) • Thenga Network</title><style>{COMMON_CSS}</style></head>
+        <head>
+            <title>Libra RP (Fedrix Clan) • Thenga Network</title>
+            <style>
+                {COMMON_CSS}
+                body {{
+                    background-color: #07080c;
+                    color: #f8fafc;
+                    overflow-x: hidden;
+                }}
+                .ingame-shell {{
+                    display: flex;
+                    min-height: calc(100vh - 65px);
+                    width: 100%;
+                }}
+                .ingame-sidebar {{
+                    width: 280px;
+                    background: #0b0d13;
+                    border-right: 1px solid #1a1e2b;
+                    padding: 24px 20px;
+                    display: flex;
+                    flex-direction: column;
+                    flex-shrink: 0;
+                }}
+                .ingame-content {{
+                    flex: 1;
+                    padding: 28px 36px;
+                    max-width: 1350px;
+                    width: 100%;
+                }}
+                .ingame-group-title {{
+                    font-size: 10px;
+                    font-weight: 800;
+                    letter-spacing: 1.5px;
+                    text-transform: uppercase;
+                    color: #475569;
+                    margin: 18px 0 6px 6px;
+                }}
+                .ingame-nav-btn {{
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    padding: 10px 14px;
+                    border-radius: 8px;
+                    font-size: 13px;
+                    font-weight: 700;
+                    color: #94a3b8;
+                    text-decoration: none;
+                    cursor: pointer;
+                    background: transparent;
+                    border: none;
+                    width: 100%;
+                    text-align: left;
+                    transition: all 0.15s;
+                    margin-bottom: 3px;
+                }}
+                .ingame-nav-btn:hover {{
+                    background: #151824;
+                    color: #fff;
+                }}
+                .ingame-nav-btn.active {{
+                    background: rgba(239, 68, 68, 0.14);
+                    color: #fff;
+                    border-left: 3px solid #ef4444;
+                }}
+                .ingame-side-btn {{
+                    background: #141824;
+                    border: 1px solid #262c3e;
+                    color: #e2e8f0;
+                    font-size: 11px;
+                    font-weight: 800;
+                    padding: 11px;
+                    border-radius: 8px;
+                    text-align: center;
+                    text-transform: uppercase;
+                    letter-spacing: 0.8px;
+                    cursor: pointer;
+                    margin-top: 8px;
+                    width: 100%;
+                    transition: all 0.15s;
+                }}
+                .ingame-side-btn:hover {{
+                    background: #1f2538;
+                    border-color: #3b445f;
+                    color: #fff;
+                }}
+                .ingame-btn-action {{
+                    background: transparent;
+                    border: 1.5px solid #ef4444;
+                    color: #f87171;
+                    font-size: 11px;
+                    font-weight: 800;
+                    padding: 4px 10px;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    letter-spacing: 0.5px;
+                    transition: all 0.15s;
+                }}
+                .ingame-btn-action:hover {{
+                    background: #ef4444;
+                    color: #fff;
+                    box-shadow: 0 0 10px rgba(239,68,68,0.5);
+                }}
+                .ingame-btn-action.btn-kick:hover {{
+                    background: #b91c1c;
+                }}
+                .ingame-btn-claim {{
+                    background: rgba(34, 197, 94, 0.15);
+                    border: 1.5px solid #22c55e;
+                    color: #4ade80;
+                    font-size: 11px;
+                    font-weight: 800;
+                    padding: 4px 10px;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    transition: all 0.15s;
+                }}
+                .ingame-btn-claim:hover {{
+                    background: #22c55e;
+                    color: #fff;
+                }}
+                .ingame-dot {{
+                    display: inline-block;
+                    width: 8px;
+                    height: 8px;
+                    border-radius: 50%;
+                    margin-right: 10px;
+                    flex-shrink: 0;
+                }}
+                .dot-online {{
+                    background: #22c55e;
+                    box-shadow: 0 0 10px #22c55e;
+                }}
+                .dot-offline {{
+                    background: #475569;
+                }}
+                .ingame-search {{
+                    background: #0f121a;
+                    border: 1px solid #242a3a;
+                    color: #fff;
+                    padding: 10px 14px;
+                    border-radius: 8px;
+                    font-size: 13px;
+                    width: 320px;
+                    margin: 0;
+                }}
+                .ingame-search:focus {{
+                    border-color: #ef4444;
+                    outline: none;
+                    box-shadow: 0 0 12px rgba(239,68,68,0.35);
+                }}
+                .quick-stat-card {{
+                    background: #0b0d14;
+                    border: 1px solid #1a1e2b;
+                    border-radius: 12px;
+                    padding: 16px 20px;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                }}
+                .quick-stat-card:hover {{
+                    border-color: #ef4444;
+                    transform: translateY(-2px);
+                    box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+                }}
+                .modal-backdrop {{
+                    display: none;
+                    position: fixed;
+                    top: 0; left: 0; width: 100%; height: 100%;
+                    background: rgba(0, 0, 0, 0.75);
+                    backdrop-filter: blur(6px);
+                    z-index: 9999;
+                    justify-content: center;
+                    align-items: center;
+                    padding: 20px;
+                }}
+                @media (max-width: 900px) {{
+                    .ingame-shell {{ flex-direction: column; }}
+                    .ingame-sidebar {{ width: 100%; border-right: none; border-bottom: 1px solid #1a1e2b; }}
+                    .ingame-content {{ padding: 20px; }}
+                }}
+            </style>
+        </head>
         <body>
-            {render_header(user, "Libra RP (Fedrix)")}
+            {render_header(user, "Libra RP (Fedrix Clan)")}
 
-            <main style="max-width: 1200px; margin: 24px auto; width: 100%; padding: 0 20px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                    <div>
-                        <a href="/" style="color:var(--text-secondary); text-decoration:none; font-size:13px; font-weight:600;">← Back to Game Selection</a>
-                        <h1 style="color:#c084fc; margin-top:4px;">⚖️ Libra RP (Fedrix) Operations</h1>
-                    </div>
-                </div>
-
-                <div class="tabs">
-                    <button class="tab-btn active" onclick="showTab('bank')">🏦 Fedrix Fund</button>
-                    <button class="tab-btn" onclick="showTab('garage')">🏎️ Fedrix Fleet ({len(vehicles)})</button>
-                    <button class="tab-btn" onclick="showTab('events')">⚔️ Events Radar ({len(events)})</button>
-                </div>
-
-                <!-- TAB 1: BANK -->
-                <div id="tab-bank">
-                    <div class="grid-3" style="margin-bottom: 24px;">
-                        <div class="card">
-                            <div class="stat-label">Libra RP Treasury</div>
-                            <div class="stat-val" style="color:#c084fc;">{format_money(bal['balance'])}</div>
-                        </div>
-                        <div class="card">
-                            <div class="stat-label">Total Deposited</div>
-                            <div class="stat-val" style="color:#10b981;">{format_money(bal['total_deposited'])}</div>
-                        </div>
-                        <div class="card">
-                            <div class="stat-label">Total Withdrawn</div>
-                            <div class="stat-val" style="color:#ef4444;">{format_money(bal['total_withdrawn'])}</div>
-                        </div>
+            <div class="ingame-shell">
+                <!-- IN-GAME LEFT SIDEBAR -->
+                <aside class="ingame-sidebar">
+                    <!-- Title & Identity -->
+                    <div style="margin-bottom: 20px;">
+                        <div style="font-size: 11px; font-weight: 800; color: #94a3b8; letter-spacing: 1.5px; text-transform: uppercase;">LIBRA RP</div>
+                        <div style="font-size: 26px; font-weight: 900; color: #ffffff; letter-spacing: -0.5px; margin-top: 2px;">Fedrix</div>
                     </div>
 
-                    <div class="grid-2" style="margin-bottom: 30px;">
-                        <div class="card">
-                            <h3 style="color:#10b981; margin-bottom:12px;">📥 Deposit to Libra Fund (0% Tax)</h3>
-                            <label>Amount:</label>
-                            <input id="dep-amt" type="text" placeholder="250k or 1M">
-                            <label>Reason:</label>
-                            <input id="dep-reason" type="text" placeholder="Event bonus, Car sale, Clan task">
-                            <button class="btn btn-green" style="width:100%;" onclick="submitDeposit('librarp')">Confirm Deposit</button>
+                    <!-- Balance & Event Points -->
+                    <div style="background: #080a0f; border: 1px solid #171b26; border-radius: 10px; padding: 14px 16px; margin-bottom: 16px;">
+                        <div style="font-size: 10px; font-weight: 800; color: #64748b; letter-spacing: 1px; text-transform: uppercase;">BALANCE</div>
+                        <div style="font-size: 20px; font-weight: 900; color: #ffffff; margin-top: 2px; margin-bottom: 10px;">{format_money(bal['balance'])}</div>
+                        
+                        <div style="font-size: 10px; font-weight: 800; color: #64748b; letter-spacing: 1px; text-transform: uppercase;">EVENT POINTS</div>
+                        <div style="font-size: 20px; font-weight: 900; color: #ffffff; margin-top: 2px;">117</div>
+                    </div>
+
+                    <!-- Navigation Items -->
+                    <div class="ingame-group-title">CREW</div>
+                    <button class="ingame-nav-btn active" id="btn-tab-members" onclick="switchTab('members')">
+                        <span>👥 Members</span>
+                        <span class="badge" style="background:rgba(239,68,68,0.18); color:#f87171; font-size:11px;">{total_m_count}/100</span>
+                    </button>
+                    <button class="ingame-nav-btn" id="btn-tab-ranks" onclick="switchTab('ranks')">
+                        <span>🎖️ Ranks</span>
+                        <span class="badge" style="background:#1e2436; color:#94a3b8; font-size:11px;">10</span>
+                    </button>
+
+                    <div class="ingame-group-title">TURF</div>
+                    <button class="ingame-nav-btn" id="btn-tab-events" onclick="switchTab('events')">
+                        <span>🚩 Events</span>
+                        <span class="badge" style="background:#1e2436; color:#94a3b8; font-size:11px;">{len(events)}</span>
+                    </button>
+                    <button class="ingame-nav-btn" id="btn-tab-vehicles" onclick="switchTab('vehicles')">
+                        <span>🚗 Vehicles</span>
+                        <span class="badge" style="background:#1e2436; color:#94a3b8; font-size:11px;">{len(vehicles)}</span>
+                    </button>
+
+                    <div class="ingame-group-title">CLAN</div>
+                    <button class="ingame-nav-btn" id="btn-tab-logs" onclick="switchTab('logs')">
+                        <span>📜 Logs & Treasury</span>
+                        <span class="badge badge-green" style="font-size:11px;">0% Tax</span>
+                    </button>
+
+                    <!-- Bottom Clan Actions -->
+                    <div style="margin-top: auto; padding-top: 24px;">
+                        <button class="ingame-side-btn" onclick="triggerRecallVehicles()">RECALL VEHICLES</button>
+                        <button class="ingame-side-btn" onclick="triggerMeetingPoint()">MEETING POINT</button>
+                        <button class="ingame-side-btn" style="background:rgba(88,101,242,0.15); border-color:#5865F2; color:#818cf8; margin-top:8px;" onclick="openProfileModal()">🔗 LINK IN-GAME ID</button>
+                        <a href="/" class="ingame-side-btn" style="text-decoration:none; display:block; color:#ef4444; border-color:rgba(239,68,68,0.3); background:transparent; margin-top:12px;">← LEAVE TO HUB</a>
+                    </div>
+                </aside>
+
+                <!-- MAIN DASHBOARD CONTENT AREA -->
+                <main class="ingame-content">
+                    <!-- TOP ROW: QUICK VIEWS -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; margin-bottom: 28px;">
+                        <div class="quick-stat-card" onclick="switchTab('members')">
+                            <div class="stat-label">Fedrix Clan Roster</div>
+                            <div class="stat-val" style="color: #fff; font-size: 22px;">{total_m_count} <span style="font-size: 14px; color: #64748b;">/ 100</span></div>
+                            <div style="color: #22c55e; font-size: 12px; font-weight: 700; margin-top: 4px;">● {online_m_count} Operative Online</div>
                         </div>
 
-                        <div class="card">
-                            <h3 style="color:#ef4444; margin-bottom:12px;">📤 Withdraw from Libra Fund (0% Tax)</h3>
-                            <label>Amount:</label>
-                            <input id="with-amt" type="text" placeholder="500k">
-                            <label>Reason:</label>
-                            <input id="with-reason" type="text" placeholder="Weapons, Clan car purchase">
-                            <button class="btn btn-red" style="width:100%;" onclick="submitWithdraw('librarp')">Confirm Withdrawal</button>
+                        <div class="quick-stat-card" onclick="switchTab('logs')">
+                            <div class="stat-label">Clan Treasury (0% Tax)</div>
+                            <div class="stat-val" style="color: #22c55e; font-size: 22px;">{format_money(bal['balance'])}</div>
+                            <div style="color: #94a3b8; font-size: 12px; font-weight: 600; margin-top: 4px;">Direct Fedrix Clan Bank</div>
+                        </div>
+
+                        <div class="quick-stat-card" onclick="switchTab('vehicles')">
+                            <div class="stat-label">Fedrix Fleet</div>
+                            <div class="stat-val" style="color: #fff; font-size: 22px;">{len(vehicles)} Cars</div>
+                            <div style="color: #c084fc; font-size: 12px; font-weight: 600; margin-top: 4px;">High-tier clan fleet</div>
+                        </div>
+
+                        <div class="quick-stat-card" onclick="switchTab('events')">
+                            <div class="stat-label">Daily Events & Points</div>
+                            <div class="stat-val" style="color: #c084fc; font-size: 22px;">117 Pts</div>
+                            <div style="color: #f59e0b; font-size: 12px; font-weight: 600; margin-top: 4px;">3 Scheduled Events</div>
                         </div>
                     </div>
 
-                    <div class="card">
-                        <h3>📜 Recent Libra RP Transactions</h3>
-                        <table>
-                            <thead><tr><th>Type</th><th>Amount</th><th>Member</th><th>Reason</th><th>Date</th></tr></thead>
-                            <tbody>{tx_rows}</tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- TAB 2: GARAGE -->
-                <div id="tab-garage" style="display:none;">
-                    <div class="card" style="margin-bottom: 20px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <h3>🚗 Add Vehicle to Fedrix Fleet</h3>
-                            <div style="display:flex; gap:10px;">
-                                <input id="veh-name" type="text" placeholder="Name (e.g. Pegassi Terzo)" style="margin:0; width:180px;">
-                                <input id="veh-plate" type="text" placeholder="Plate (FEDRIX17)" style="margin:0; width:140px;">
-                                <input id="veh-rank" type="text" placeholder="Min Rank (e.g. 4)" style="margin:0; width:110px;">
-                                <button class="btn btn-primary" onclick="addLibraVehicle()">+ Add Car</button>
+                    <!-- TAB 1: MEMBERS (AUTHENTIC IN-GAME ROSTER) -->
+                    <div id="view-members">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+                            <div>
+                                <h1 style="font-size: 32px; font-weight: 900; color: #fff; letter-spacing: -0.5px;">Members</h1>
+                                <div style="font-size: 18px; font-weight: 700; color: #94a3b8; margin-top: 4px;">{total_m_count}/100</div>
+                            </div>
+                            <div style="display: flex; gap: 12px; align-items: center;">
+                                <input type="text" class="ingame-search" id="member-search" placeholder="Search by ID or name..." onkeyup="filterMembers(this.value)">
+                                {add_btn_html}
                             </div>
                         </div>
+
+                        <div class="card" style="padding: 0; overflow: hidden; background: #0a0c12; border: 1px solid #1a1e2b;">
+                            <table style="margin: 0;">
+                                <thead>
+                                    <tr style="background: #08090d; border-bottom: 1px solid #161924;">
+                                        <th style="padding: 14px 18px; color: #64748b; font-size: 11px;">STATUS / NAME</th>
+                                        <th style="padding: 14px 18px; color: #64748b; font-size: 11px;">RANK</th>
+                                        <th style="padding: 14px 18px; color: #64748b; font-size: 11px;">LAST SEEN</th>
+                                        <th style="padding: 14px 18px; color: #64748b; font-size: 11px; text-align: right;">ACTIONS</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="members-table-body">
+                                    {member_rows}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
 
-                    <div class="card">
-                        <h3>Fedrix Fleet ({len(vehicles)} Vehicles)</h3>
-                        <table>
-                            <thead>
-                                <tr><th>ID</th><th>Vehicle Name</th><th>Plate</th><th>Rank Req</th><th>Insurance</th><th>Actions</th></tr>
-                            </thead>
-                            <tbody>{veh_rows}</tbody>
-                        </table>
+                    <!-- TAB 2: RANKS HIERARCHY -->
+                    <div id="view-ranks" style="display: none;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                            <div>
+                                <h1 style="font-size: 28px; font-weight: 900; color: #fff;">Clan Ranks & Hierarchy</h1>
+                                <p style="color: var(--text-secondary); font-size: 14px; margin-top: 4px;">Fedrix Clan command structure, operational permissions, and active counts.</p>
+                            </div>
+                        </div>
+
+                        <div class="card" style="padding: 0; overflow: hidden; background: #0a0c12; border: 1px solid #1a1e2b;">
+                            <table style="margin: 0;">
+                                <thead>
+                                    <tr style="background: #08090d; border-bottom: 1px solid #161924;">
+                                        <th style="padding: 14px 18px;">TIER</th>
+                                        <th style="padding: 14px 18px;">RANK NAME</th>
+                                        <th style="padding: 14px 18px;">DUTIES & OPERATIONAL SCOPE</th>
+                                        <th style="padding: 14px 18px;">GOVERNANCE</th>
+                                        <th style="padding: 14px 18px; text-align: right;">OPERATIVES</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {rank_rows}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- TAB 3: VEHICLES (FEDRIX FLEET) -->
+                    <div id="view-vehicles" style="display: none;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+                            <div>
+                                <h1 style="font-size: 28px; font-weight: 900; color: #fff;">Fedrix Fleet ({len(vehicles)} Cars)</h1>
+                                <p style="color: var(--text-secondary); font-size: 14px; margin-top: 4px;">High-tier clan vehicles with rank requirements and insurance maintenance.</p>
+                            </div>
+                            <div style="display: flex; gap: 10px;">
+                                <input type="text" class="ingame-search" id="veh-search" placeholder="Search vehicle or plate..." onkeyup="filterVehicles(this.value)">
+                                <button class="btn btn-primary" onclick="openAddCarModal()">+ Add Car</button>
+                            </div>
+                        </div>
+
+                        <div class="card" style="padding: 0; overflow: hidden; background: #0a0c12; border: 1px solid #1a1e2b;">
+                            <table style="margin: 0;">
+                                <thead>
+                                    <tr style="background: #08090d; border-bottom: 1px solid #161924;">
+                                        <th style="padding: 14px 18px;">ID</th>
+                                        <th style="padding: 14px 18px;">VEHICLE MODEL</th>
+                                        <th style="padding: 14px 18px;">PLATE</th>
+                                        <th style="padding: 14px 18px;">RANK REQ</th>
+                                        <th style="padding: 14px 18px;">INSURANCE</th>
+                                        <th style="padding: 14px 18px; text-align: right;">ACTIONS</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="vehicles-table-body">
+                                    {veh_rows}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- TAB 4: EVENTS RADAR -->
+                    <div id="view-events" style="display: none;">
+                        <div style="margin-bottom: 20px;">
+                            <h1 style="font-size: 28px; font-weight: 900; color: #fff;">Events Radar (3 Scheduled)</h1>
+                            <p style="color: var(--text-secondary); font-size: 14px; margin-top: 4px;">Live clan turf and combat events for Libra RP Fedrix Clan.</p>
+                        </div>
+                        <div class="grid-2">{event_cards}</div>
+                    </div>
+
+                    <!-- TAB 5: LOGS & TREASURY -->
+                    <div id="view-logs" style="display: none;">
+                        <div style="margin-bottom: 20px;">
+                            <h1 style="font-size: 28px; font-weight: 900; color: #fff;">Clan Treasury & Transaction Logs</h1>
+                            <p style="color: var(--text-secondary); font-size: 14px; margin-top: 4px;">Fedrix Clan Bank features 0% Tax on both deposits and withdrawals.</p>
+                        </div>
+
+                        <div class="grid-3" style="margin-bottom: 24px;">
+                            <div class="card" style="background:#0a0c12; border: 1px solid #1a1e2b;">
+                                <div class="stat-label">Treasury Balance</div>
+                                <div class="stat-val" style="color:#22c55e;">{format_money(bal['balance'])}</div>
+                            </div>
+                            <div class="card" style="background:#0a0c12; border: 1px solid #1a1e2b;">
+                                <div class="stat-label">Total Deposited</div>
+                                <div class="stat-val" style="color:#10b981;">{format_money(bal['total_deposited'])}</div>
+                            </div>
+                            <div class="card" style="background:#0a0c12; border: 1px solid #1a1e2b;">
+                                <div class="stat-label">Total Withdrawn</div>
+                                <div class="stat-val" style="color:#ef4444;">{format_money(bal['total_withdrawn'])}</div>
+                            </div>
+                        </div>
+
+                        <div class="grid-2" style="margin-bottom: 28px;">
+                            <div class="card" style="background:#0a0c12; border: 1px solid #1a1e2b;">
+                                <h3 style="color:#10b981; margin-bottom:12px;">📥 Deposit to Libra Fund (0% Tax)</h3>
+                                <label style="font-size:11px; font-weight:800; color:#94a3b8;">Amount:</label>
+                                <input id="dep-amt" type="text" placeholder="250k or 1M">
+                                <label style="font-size:11px; font-weight:800; color:#94a3b8;">Reason:</label>
+                                <input id="dep-reason" type="text" placeholder="Event bonus, Car sale, Clan task">
+                                <button class="btn btn-green" style="width:100%;" onclick="submitDeposit('librarp')">Confirm Deposit</button>
+                            </div>
+
+                            <div class="card" style="background:#0a0c12; border: 1px solid #1a1e2b;">
+                                <h3 style="color:#ef4444; margin-bottom:12px;">📤 Withdraw from Libra Fund (0% Tax)</h3>
+                                <label style="font-size:11px; font-weight:800; color:#94a3b8;">Amount:</label>
+                                <input id="with-amt" type="text" placeholder="500k">
+                                <label style="font-size:11px; font-weight:800; color:#94a3b8;">Reason:</label>
+                                <input id="with-reason" type="text" placeholder="Weapons, Clan car purchase">
+                                <button class="btn btn-red" style="width:100%;" onclick="submitWithdraw('librarp')">Confirm Withdrawal</button>
+                            </div>
+                        </div>
+
+                        <div class="card" style="padding: 0; overflow: hidden; background: #0a0c12; border: 1px solid #1a1e2b;">
+                            <div style="padding: 16px 20px; border-bottom: 1px solid #161924;">
+                                <h3 style="color:#fff; font-size:16px;">📜 Recent Clan Transactions</h3>
+                            </div>
+                            <table style="margin:0;">
+                                <thead>
+                                    <tr style="background: #08090d;">
+                                        <th>TYPE</th><th>AMOUNT</th><th>MEMBER</th><th>REASON</th><th>DATE</th>
+                                    </tr>
+                                </thead>
+                                <tbody>{tx_rows}</tbody>
+                            </table>
+                        </div>
+                    </div>
+                </main>
+            </div>
+
+            <!-- MODAL 1: EDIT RANK -->
+            <div id="rankModal" class="modal-backdrop">
+                <div class="card" style="max-width: 440px; width: 100%; border: 1.5px solid #ef4444; box-shadow: 0 10px 40px rgba(0,0,0,0.8);">
+                    <h3 style="color: #fff; font-size: 18px; font-weight: 900; margin-bottom: 4px;">🎖️ Edit Clan Member Rank</h3>
+                    <p id="rank-modal-sub" style="color: #94a3b8; font-size: 13px; margin-bottom: 16px;">Update rank for member</p>
+                    <input type="hidden" id="edit-member-id">
+                    
+                    <label style="font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase;">Select New Rank:</label>
+                    <select id="new-rank-select" style="margin-top: 6px; margin-bottom: 20px;">
+                        <option value="1|Leader">Level 1 - Leader (Supreme Commander)</option>
+                        <option value="2|Co-Leader">Level 2 - Co-Leader (Executive Command)</option>
+                        <option value="3|Supervisor">Level 3 - Supervisor (High Command)</option>
+                        <option value="4|Enforcer">Level 4 - Enforcer (Combat Vanguard)</option>
+                        <option value="5|Pro">Level 5 - Pro (Senior Operative)</option>
+                        <option value="6|Ranger">Level 6 - Ranger (Patrol Scout)</option>
+                        <option value="7|Trainee">Level 7 - Trainee (Recruit)</option>
+                        <option value="8|SUSPENDED">Level 8 - SUSPENDED (Action Restriction)</option>
+                        <option value="9|VAAZHA">Level 9 - VAAZHA (Demoted / Fun Rank)</option>
+                        <option value="11|GUEST">Level 11 - GUEST (Allied Clan Visitor)</option>
+                    </select>
+
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-primary" style="flex: 1;" onclick="submitRankChange()">Update Rank</button>
+                        <button class="btn btn-secondary" onclick="closeModal('rankModal')">Cancel</button>
                     </div>
                 </div>
+            </div>
 
-                <!-- TAB 3: EVENTS -->
-                <div id="tab-events" style="display:none;">
-                    <div class="grid-2" style="margin-bottom:24px;">{event_cards}</div>
+            <!-- MODAL 2: KICK CONFIRMATION -->
+            <div id="kickModal" class="modal-backdrop">
+                <div class="card" style="max-width: 420px; width: 100%; border: 1.5px solid #ef4444; box-shadow: 0 10px 40px rgba(0,0,0,0.8);">
+                    <h3 style="color: #ef4444; font-size: 18px; font-weight: 900; margin-bottom: 6px;">⚠️ Kick Clan Member?</h3>
+                    <p id="kick-modal-sub" style="color: #cbd5e1; font-size: 14px; margin-bottom: 20px; line-height: 1.5;">Are you sure you want to remove this operative from the Fedrix Clan roster?</p>
+                    <input type="hidden" id="kick-member-id">
+
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-red" style="flex: 1;" onclick="submitKick()">Confirm Kick</button>
+                        <button class="btn btn-secondary" onclick="closeModal('kickModal')">Cancel</button>
+                    </div>
                 </div>
-            </main>
+            </div>
+
+            <!-- MODAL 3: ADD MEMBER -->
+            <div id="addMemberModal" class="modal-backdrop">
+                <div class="card" style="max-width: 440px; width: 100%; border: 1.5px solid #ef4444; box-shadow: 0 10px 40px rgba(0,0,0,0.8);">
+                    <h3 style="color: #fff; font-size: 18px; font-weight: 900; margin-bottom: 4px;">➕ Add Clan Member to Fedrix</h3>
+                    <p style="color: #94a3b8; font-size: 13px; margin-bottom: 16px;">Enroll a new operative into the clan database</p>
+                    
+                    <label style="font-size: 11px; font-weight: 800; color: #94a3b8;">In-Game ID (e.g. 5890):</label>
+                    <input id="add-member-id" type="number" placeholder="5890">
+
+                    <label style="font-size: 11px; font-weight: 800; color: #94a3b8;">Character Name:</label>
+                    <input id="add-member-name" type="text" placeholder="e.g. Dexter Morgan">
+
+                    <label style="font-size: 11px; font-weight: 800; color: #94a3b8;">Initial Rank:</label>
+                    <select id="add-member-rank" style="margin-bottom: 20px;">
+                        <option value="7|Trainee">Level 7 - Trainee (Recruit)</option>
+                        <option value="6|Ranger">Level 6 - Ranger</option>
+                        <option value="5|Pro">Level 5 - Pro</option>
+                        <option value="4|Enforcer">Level 4 - Enforcer</option>
+                        <option value="3|Supervisor">Level 3 - Supervisor</option>
+                        <option value="11|GUEST">Level 11 - GUEST</option>
+                    </select>
+
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-primary" style="flex: 1;" onclick="submitAddMember()">Add Member</button>
+                        <button class="btn btn-secondary" onclick="closeModal('addMemberModal')">Cancel</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODAL 4: ADD VEHICLE -->
+            <div id="addCarModal" class="modal-backdrop">
+                <div class="card" style="max-width: 440px; width: 100%; border: 1.5px solid #a855f7;">
+                    <h3 style="color: #c084fc; font-size: 18px; font-weight: 900; margin-bottom: 16px;">🏎️ Add Car to Fedrix Fleet</h3>
+                    <label style="font-size: 11px; font-weight: 800; color: #94a3b8;">Vehicle Model:</label>
+                    <input id="new-veh-name" type="text" placeholder="e.g. Pegassi Terzo">
+                    <label style="font-size: 11px; font-weight: 800; color: #94a3b8;">License Plate:</label>
+                    <input id="new-veh-plate" type="text" placeholder="e.g. FEDRIX25">
+                    <label style="font-size: 11px; font-weight: 800; color: #94a3b8;">Min Rank Required (1-10):</label>
+                    <input id="new-veh-rank" type="text" placeholder="4">
+
+                    <div style="display: flex; gap: 10px; margin-top: 10px;">
+                        <button class="btn btn-purple" style="flex: 1;" onclick="submitAddCar()">Add Vehicle</button>
+                        <button class="btn btn-secondary" onclick="closeModal('addCarModal')">Cancel</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODAL 5: FIRST-TIME PROFILE SETUP & LINKING -->
+            <div id="profileModal" class="modal-backdrop" style="{"display: flex;" if is_first_time else "display: none;"}">
+                <div class="card" style="max-width: 500px; width: 100%; border: 1.5px solid var(--accent); box-shadow: 0 16px 50px rgba(0,0,0,0.85); border-radius: 16px;">
+                    <div style="text-align: center; margin-bottom: 18px;">
+                        <img src="/logo.png" style="width: 64px; height: auto; filter: drop-shadow(0 4px 12px rgba(239,68,68,0.5));">
+                        <h2 style="color: #fff; font-size: 20px; font-weight: 900; margin-top: 10px; text-transform: uppercase;">
+                            Connect Your In-Game Operatives
+                        </h2>
+                        <p style="color: #94a3b8; font-size: 13px; margin-top: 4px;">
+                            Link your Discord account to your Grand RP & Libra RP characters
+                        </p>
+                    </div>
+
+                    <!-- Libra RP Select -->
+                    <div style="background: #090a0f; border: 1px solid #1a1e2b; border-left: 3px solid #a855f7; border-radius: 8px; padding: 12px; margin-bottom: 14px;">
+                        <label style="font-size: 11px; font-weight: 800; color: #c084fc; text-transform: uppercase;">⚖️ Libra RP (Fedrix Clan Character):</label>
+                        <select id="link-libra-id" style="margin-top: 6px; margin-bottom: 4px;">
+                            {member_select_options}
+                        </select>
+                        <span style="font-size: 11px; color: #64748b;">Select your in-game clan identity from the 28 seeded members</span>
+                    </div>
+
+                    <!-- Grand RP Input -->
+                    <div style="background: #090a0f; border: 1px solid #1a1e2b; border-left: 3px solid #3b82f6; border-radius: 8px; padding: 12px; margin-bottom: 20px;">
+                        <label style="font-size: 11px; font-weight: 800; color: #60a5fa; text-transform: uppercase;">🌆 Grand RP (EN2 Character):</label>
+                        <input id="link-grand-name" type="text" value="{profile.get('grand_member_name') or user['username']}" placeholder="Character Name (e.g. Haris Thenga)" style="margin-top: 6px; margin-bottom: 8px;">
+                        
+                        <label style="font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase;">Grand RP Rank:</label>
+                        <select id="link-grand-rank" style="margin-top: 4px; margin-bottom: 4px;">
+                            <option value="Family Member (Rank 1)">Family Member (Rank 1)</option>
+                            <option value="Enforcer (Rank 3)">Enforcer (Rank 3)</option>
+                            <option value="High Command (Rank 7)">High Command (Rank 7)</option>
+                            <option value="Co-Leader (Rank 9)">Co-Leader (Rank 9)</option>
+                            <option value="Leader / Boss (Rank 10)">Leader / Boss (Rank 10)</option>
+                        </select>
+                    </div>
+
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-primary" style="flex: 1; padding: 12px;" onclick="submitLinkProfiles()">Save & Link Persona</button>
+                        <button class="btn btn-secondary" onclick="closeModal('profileModal')">Later</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TOAST BANNER -->
+            <div id="toast-banner" style="display:none; position:fixed; bottom:24px; right:24px; background:#10131d; border:1.5px solid #22c55e; color:#fff; padding:14px 20px; border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,0.8); z-index:99999; font-weight:700; font-size:14px;"></div>
 
             <script>
-                function showTab(tab) {{
-                    document.getElementById('tab-bank').style.display = tab === 'bank' ? 'block' : 'none';
-                    document.getElementById('tab-garage').style.display = tab === 'garage' ? 'block' : 'none';
-                    document.getElementById('tab-events').style.display = tab === 'events' ? 'block' : 'none';
-                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-                    event.target.classList.add('active');
+                function switchTab(tab) {{
+                    document.getElementById('view-members').style.display = tab === 'members' ? 'block' : 'none';
+                    document.getElementById('view-ranks').style.display = tab === 'ranks' ? 'block' : 'none';
+                    document.getElementById('view-vehicles').style.display = tab === 'vehicles' ? 'block' : 'none';
+                    document.getElementById('view-events').style.display = tab === 'events' ? 'block' : 'none';
+                    document.getElementById('view-logs').style.display = tab === 'logs' ? 'block' : 'none';
+
+                    document.querySelectorAll('.ingame-nav-btn').forEach(b => b.classList.remove('active'));
+                    let activeBtn = document.getElementById('btn-tab-' + tab);
+                    if (activeBtn) activeBtn.classList.add('active');
+                }}
+
+                function filterMembers(q) {{
+                    q = q.toLowerCase().trim();
+                    document.querySelectorAll('#members-table-body tr').forEach(r => {{
+                        let name = r.getAttribute('data-name') || '';
+                        let id = r.getAttribute('data-id') || '';
+                        if (name.includes(q) || id.includes(q)) {{
+                            r.style.display = '';
+                        }} else {{
+                            r.style.display = 'none';
+                        }}
+                    }});
+                }}
+
+                function filterVehicles(q) {{
+                    q = q.toLowerCase().trim();
+                    document.querySelectorAll('#vehicles-table-body tr').forEach(r => {{
+                        let name = r.getAttribute('data-name') || '';
+                        let plate = r.getAttribute('data-plate') || '';
+                        if (name.includes(q) || plate.includes(q)) {{
+                            r.style.display = '';
+                        }} else {{
+                            r.style.display = 'none';
+                        }}
+                    }});
+                }}
+
+                function showToast(msg, isSuccess = true) {{
+                    let t = document.getElementById('toast-banner');
+                    t.style.borderColor = isSuccess ? '#22c55e' : '#ef4444';
+                    t.innerHTML = msg;
+                    t.style.display = 'block';
+                    setTimeout(() => {{ t.style.display = 'none'; }}, 4500);
+                }}
+
+                function closeModal(id) {{
+                    document.getElementById(id).style.display = 'none';
+                }}
+
+                function openModal(id) {{
+                    document.getElementById(id).style.display = 'flex';
+                }}
+
+                function openProfileModal() {{
+                    openModal('profileModal');
+                }}
+
+                function openRankModal(id, name, level, rankName) {{
+                    document.getElementById('edit-member-id').value = id;
+                    document.getElementById('rank-modal-sub').innerText = 'Updating rank for ' + name + ' (ID ' + id + ')';
+                    let select = document.getElementById('new-rank-select');
+                    let targetVal = level + '|' + rankName;
+                    for (let i = 0; i < select.options.length; i++) {{
+                        if (select.options[i].value.startsWith(level + '|')) {{
+                            select.selectedIndex = i;
+                            break;
+                        }}
+                    }}
+                    openModal('rankModal');
+                }}
+
+                async function submitRankChange() {{
+                    let memberId = document.getElementById('edit-member-id').value;
+                    let val = document.getElementById('new-rank-select').value;
+                    let parts = val.split('|');
+                    let newLevel = parseInt(parts[0]);
+                    let newRank = parts[1];
+
+                    let res = await fetch('/api/libra/member/rank', {{
+                        method: 'POST',
+                        headers: {{'Content-Type': 'application/json'}},
+                        body: JSON.stringify({{ member_id: memberId, new_level: newLevel, new_rank: newRank }})
+                    }});
+                    let d = await res.json();
+                    if (d.success) {{
+                        showToast("Rank updated successfully for operative!");
+                        setTimeout(() => location.reload(), 800);
+                    }} else {{
+                        alert("Error: " + d.error);
+                    }}
+                }}
+
+                function openKickModal(id, name, level) {{
+                    document.getElementById('kick-member-id').value = id;
+                    document.getElementById('kick-modal-sub').innerText = 'Are you sure you want to kick ' + name + ' (ID ' + id + ', Lv ' + level + ') from Fedrix Clan?';
+                    openModal('kickModal');
+                }}
+
+                async function submitKick() {{
+                    let memberId = document.getElementById('kick-member-id').value;
+                    let res = await fetch('/api/libra/member/kick', {{
+                        method: 'POST',
+                        headers: {{'Content-Type': 'application/json'}},
+                        body: JSON.stringify({{ member_id: memberId }})
+                    }});
+                    let d = await res.json();
+                    if (d.success) {{
+                        showToast("Operative removed from clan roster.");
+                        setTimeout(() => location.reload(), 800);
+                    }} else {{
+                        alert("Error: " + d.error);
+                    }}
+                }}
+
+                function openAddMemberModal() {{
+                    openModal('addMemberModal');
+                }}
+
+                async function submitAddMember() {{
+                    let id = document.getElementById('add-member-id').value;
+                    let name = document.getElementById('add-member-name').value;
+                    let val = document.getElementById('add-member-rank').value;
+                    let parts = val.split('|');
+                    let rankLevel = parseInt(parts[0]);
+                    let rankName = parts[1];
+
+                    if (!id || !name) return alert("Please fill in ID and character name");
+
+                    let res = await fetch('/api/libra/member/add', {{
+                        method: 'POST',
+                        headers: {{'Content-Type': 'application/json'}},
+                        body: JSON.stringify({{ id, name, rank_level: rankLevel, rank_name: rankName }})
+                    }});
+                    let d = await res.json();
+                    if (d.success) {{
+                        showToast("New operative enrolled!");
+                        setTimeout(() => location.reload(), 800);
+                    }} else {{
+                        alert("Error: " + d.error);
+                    }}
+                }}
+
+                async function claimLibraProfile(id, name) {{
+                    if (!confirm("Claim " + name + " (ID " + id + ") as your in-game identity?")) return;
+                    let res = await fetch('/api/libra/link_profile', {{
+                        method: 'POST',
+                        headers: {{'Content-Type': 'application/json'}},
+                        body: JSON.stringify({{ member_id: id }})
+                    }});
+                    let d = await res.json();
+                    if (d.success) {{
+                        showToast("Profile linked to your Discord account!");
+                        setTimeout(() => location.reload(), 800);
+                    }} else {{
+                        alert("Error: " + d.error);
+                    }}
+                }}
+
+                async function submitLinkProfiles() {{
+                    let libraId = document.getElementById('link-libra-id').value;
+                    let grandName = document.getElementById('link-grand-name').value;
+                    let grandRank = document.getElementById('link-grand-rank').value;
+
+                    let res = await fetch('/api/user/link_profiles', {{
+                        method: 'POST',
+                        headers: {{'Content-Type': 'application/json'}},
+                        body: JSON.stringify({{ libra_member_id: libraId, grand_name: grandName, grand_rank: grandRank }})
+                    }});
+                    let d = await res.json();
+                    if (d.success) {{
+                        showToast("In-game personas linked!");
+                        setTimeout(() => location.reload(), 800);
+                    }} else {{
+                        alert("Error: " + d.error);
+                    }}
+                }}
+
+                function triggerRecallVehicles() {{
+                    showToast("🚗 RECALL BROADCAST: All 24 Fedrix clan vehicles have been recalled to Clan HQ garage!");
+                }}
+
+                function triggerMeetingPoint() {{
+                    showToast("📍 GPS BROADCAST: Clan meeting point marked at Fedrix Compound (Coords: 412.5, -980.2).");
+                }}
+
+                function openAddCarModal() {{
+                    openModal('addCarModal');
+                }}
+
+                async function submitAddCar() {{
+                    let name = document.getElementById('new-veh-name').value;
+                    let plate = document.getElementById('new-veh-plate').value;
+                    let rank = document.getElementById('new-veh-rank').value || "1";
+                    if (!name) return alert("Vehicle name required");
+                    let res = await fetch('/api/vehicle/add', {{
+                        method: 'POST',
+                        headers: {{'Content-Type': 'application/json'}},
+                        body: JSON.stringify({{ server: 'librarp', name, plate, notes: 'Rank ' + rank + '+ Required' }})
+                    }});
+                    let d = await res.json();
+                    if (d.success) location.reload();
+                    else alert(d.error);
                 }}
 
                 async function submitDeposit(server) {{
@@ -1085,21 +1949,6 @@ async def handle_libra(request: web.Request):
                     if (d.success) location.reload();
                 }}
 
-                async function addLibraVehicle() {{
-                    let name = document.getElementById('veh-name').value;
-                    let plate = document.getElementById('veh-plate').value;
-                    let rank = document.getElementById('veh-rank').value || "1";
-                    if (!name) return alert("Vehicle name required");
-                    let res = await fetch('/api/vehicle/add', {{
-                        method: 'POST',
-                        headers: {{'Content-Type': 'application/json'}},
-                        body: JSON.stringify({{ server: 'librarp', name, plate, notes: 'Rank ' + rank + '+ Required' }})
-                    }});
-                    let d = await res.json();
-                    if (d.success) location.reload();
-                    else alert(d.error);
-                }}
-
                 async function removeEvent(id) {{
                     if (!confirm("Remove event?")) return;
                     let res = await fetch('/api/event/remove', {{
@@ -1113,7 +1962,7 @@ async def handle_libra(request: web.Request):
             </script>
         </body>
     </html>
-    """
+    '''
     return web.Response(text=html, content_type="text/html")
 
 # ==========================================
@@ -1240,6 +2089,93 @@ async def api_update_user_rank(request: web.Request):
     db.update_user_ranks(user["id"], grand_rank, libra_rank)
     return web.json_response({"success": True, "grand_rank": grand_rank, "libra_rank": libra_rank})
 
+async def api_libra_member_rank(request: web.Request):
+    user = require_user(request)
+    data = await request.json()
+    member_id = int(data.get("member_id", 0))
+    new_level = int(data.get("new_level", 0))
+    new_rank = str(data.get("new_rank", "")).strip()
+
+    if not member_id or not new_level or not new_rank:
+        return web.json_response({"success": False, "error": "Invalid parameters"})
+
+    conn = db.get_connection()
+    m = conn.execute("SELECT rank_level, name FROM libra_members WHERE id = ?", (member_id,)).fetchone()
+    conn.close()
+    if not m:
+        return web.json_response({"success": False, "error": "Member not found"})
+
+    target_level = m["rank_level"]
+    if not db.user_can_manage_libra(user, target_level):
+        return web.json_response({"success": False, "error": f"You do not have permission to change {m['name']}'s rank."})
+
+    db.update_libra_member_rank(member_id, new_level, new_rank)
+    return web.json_response({"success": True})
+
+async def api_libra_member_kick(request: web.Request):
+    user = require_user(request)
+    data = await request.json()
+    member_id = int(data.get("member_id", 0))
+    if not member_id:
+        return web.json_response({"success": False, "error": "Invalid member parameter"})
+
+    conn = db.get_connection()
+    m = conn.execute("SELECT rank_level, name FROM libra_members WHERE id = ?", (member_id,)).fetchone()
+    conn.close()
+    if not m:
+        return web.json_response({"success": False, "error": "Member not found"})
+
+    target_level = m["rank_level"]
+    if not db.user_can_manage_libra(user, target_level):
+        return web.json_response({"success": False, "error": f"You do not have permission to kick {m['name']}."})
+
+    db.kick_libra_member(member_id)
+    return web.json_response({"success": True})
+
+async def api_libra_member_add(request: web.Request):
+    user = require_user(request)
+    if not db.user_can_manage_libra(user):
+        return web.json_response({"success": False, "error": "Only Leader, Co-Leader, or Supervisor can add clan members."})
+
+    data = await request.json()
+    try:
+        member_id = int(data.get("id", 0))
+        if member_id <= 0:
+            return web.json_response({"success": False, "error": "Valid In-Game ID is required"})
+    except ValueError:
+        return web.json_response({"success": False, "error": "ID must be a number"})
+
+    name = str(data.get("name", "")).strip()
+    if not name:
+        return web.json_response({"success": False, "error": "Character name is required"})
+
+    rank_level = int(data.get("rank_level", 7))
+    rank_name = str(data.get("rank_name", "Trainee")).strip()
+    db.add_libra_member(member_id, name, rank_level, rank_name)
+    return web.json_response({"success": True})
+
+async def api_libra_link_profile(request: web.Request):
+    user = require_user(request)
+    data = await request.json()
+    member_id = int(data.get("member_id", 0))
+    if not member_id:
+        return web.json_response({"success": False, "error": "Invalid member ID"})
+    db.link_libra_member(member_id, user["id"], user["username"])
+    return web.json_response({"success": True})
+
+async def api_user_link_profiles(request: web.Request):
+    user = require_user(request)
+    data = await request.json()
+    libra_id = data.get("libra_member_id")
+    try:
+        libra_id = int(libra_id) if libra_id and str(libra_id) != "0" else None
+    except ValueError:
+        libra_id = None
+    grand_name = str(data.get("grand_name", "")).strip() or user["username"]
+    grand_rank = str(data.get("grand_rank", "")).strip() or "Family Member (Rank 1)"
+    db.link_user_profiles(user["id"], user["username"], libra_id, grand_name, grand_rank)
+    return web.json_response({"success": True})
+
 async def handle_logo(request: web.Request):
     logo_path = os.path.join(os.path.dirname(__file__), "static", "logo.png")
     if os.path.exists(logo_path):
@@ -1272,5 +2208,10 @@ def create_web_app():
     app.router.add_post("/api/plantation/harvest", api_plantation_harvest)
     app.router.add_post("/api/event/remove", api_event_remove)
     app.router.add_post("/api/user/rank", api_update_user_rank)
+    app.router.add_post("/api/libra/member/rank", api_libra_member_rank)
+    app.router.add_post("/api/libra/member/kick", api_libra_member_kick)
+    app.router.add_post("/api/libra/member/add", api_libra_member_add)
+    app.router.add_post("/api/libra/link_profile", api_libra_link_profile)
+    app.router.add_post("/api/user/link_profiles", api_user_link_profiles)
 
     return app
