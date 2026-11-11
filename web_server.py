@@ -286,12 +286,6 @@ th { color: var(--text-secondary); font-size: 12px; text-transform: uppercase; l
 """
 
 def render_header(user: dict, subtitle: str = "") -> str:
-    is_adm = is_admin_user(user)
-    badge_html = (
-        '<span class="badge badge-red" style="font-size: 11px; margin-left: 6px;">👑 FOUNDER / ADMIN</span>'
-        if is_adm else
-        '<span class="badge badge-green" style="font-size: 11px; margin-left: 6px;">MEMBER</span>'
-    )
     sub_tag = (
         f'<span style="font-size:14px; color:#94a3b8; font-weight:600;">/ {subtitle}</span>'
         if subtitle else
@@ -306,7 +300,6 @@ def render_header(user: dict, subtitle: str = "") -> str:
         <div class="user-pill">
             <img class="user-avatar" src="{user['avatar_url']}">
             <span style="font-weight:700; color:#fff;">{user['username']}</span>
-            {badge_html}
             <a href="/auth/logout" class="logout-btn">Logout</a>
         </div>
     </header>
@@ -1149,6 +1142,29 @@ async def handle_libra(request: web.Request):
         member_select_options += f'<option value="{mid}" {selected}>{mname} (ID {mid} • Lv {mlvl} {mrname}){suffix}</option>'
     member_select_options += '<option value="0">I am a new recruit / not on this roster</option>'
 
+        # 6. Extract Operative Dossier Profiles for Right Vertical Panel
+    libra_m = next((m for m in members if m['id'] == profile.get('libra_member_id') or m.get('discord_id') == str(user['id'])), None)
+    libra_char_name = libra_m['name'] if libra_m else (profile.get('libra_member_name') or 'Operative')
+    libra_char_id = str(libra_m['id']) if libra_m else (str(profile.get('libra_member_id')) if profile.get('libra_member_id') else '5392')
+    libra_char_rank = f"Lv {libra_m['rank_level']} {libra_m['rank_name']}" if libra_m else profile.get('libra_rank', 'Lv 2 Co-Leader')
+    libra_act = profile.get('libra_recent_activity') or ('● Online now • Fedrix Clan Operations' if (libra_m and libra_m.get('is_online')) else 'Active clan operative')
+    libra_awards = profile.get('libra_awards') or '⚔️ Fedrix Vanguard Cross • 🏆 Master Turf Tactician'
+    libra_punishments = profile.get('libra_punishments') or 'Good Standing (0 Suspensions)'
+
+    grand_char_name = profile.get('grand_member_name') or user['username']
+    grand_char_id = profile.get('grand_member_id') or '7104'
+    grand_char_rank = profile.get('grand_rank') or 'Leader / Boss (Rank 10)'
+    grand_act = profile.get('grand_recent_activity') or 'Pineapple Harvest Banked • Active Fleet Operative'
+    grand_awards = profile.get('grand_awards') or '🎖️ Malayali Club Honor Medal • 🌟 Top Plantation Tycoon'
+    grand_punishments = profile.get('grand_punishments') or 'Clean Record (0 Active Warnings)'
+
+    discord_name = user['username']
+    discord_id = str(user['id'])
+    discord_rank = profile.get('discord_rank') or ('👑 Server Founder & Command Staff' if is_admin_user(user) else 'Verified Malayali Club Operative')
+    discord_act = profile.get('discord_recent_activity') or 'Authenticated via Discord OAuth2 • Command Center Active'
+    discord_awards = profile.get('discord_awards') or '⭐ Server Creator • 🛡️ Bot Administrator'
+    discord_punishments = profile.get('discord_punishments') or 'Clean Record (0 Mutes / Warnings)'
+
     total_m_count = len(members)
     online_m_count = sum(1 for m in members if m.get("is_online"))
 
@@ -1333,6 +1349,79 @@ async def handle_libra(request: web.Request):
                     align-items: center;
                     padding: 20px;
                 }}
+                
+                .ingame-dossier-panel {{
+                    width: 330px;
+                    background: #090b10;
+                    border-left: 1px solid #1a1e2b;
+                    padding: 22px 18px;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 16px;
+                    flex-shrink: 0;
+                    box-sizing: border-box;
+                }}
+                .dossier-card {{
+                    background: #0c0e15;
+                    border: 1px solid #1c202d;
+                    border-radius: 12px;
+                    padding: 16px 18px;
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+                    transition: transform 0.15s, border-color 0.15s;
+                    position: relative;
+                }}
+                .dossier-card:hover {{
+                    transform: translateY(-2px);
+                }}
+                .card-grand {{
+                    border-left: 3.5px solid #3b82f6;
+                    border-color: rgba(59, 130, 246, 0.4);
+                }}
+                .card-libra {{
+                    border-left: 3.5px solid #a855f7;
+                    border-color: rgba(168, 85, 247, 0.4);
+                }}
+                .card-discord {{
+                    border-left: 3.5px solid #5865F2;
+                    border-color: rgba(88, 101, 242, 0.4);
+                }}
+                .dossier-label {{
+                    font-size: 10px;
+                    font-weight: 800;
+                    color: #64748b;
+                    letter-spacing: 0.8px;
+                    text-transform: uppercase;
+                    margin-top: 8px;
+                }}
+                .dossier-val {{
+                    font-size: 12.5px;
+                    line-height: 1.4;
+                    margin-top: 2px;
+                }}
+                .dossier-edit-btn {{
+                    background: rgba(255,255,255,0.06);
+                    border: 1px solid #272c3d;
+                    color: #94a3b8;
+                    cursor: pointer;
+                    font-size: 11px;
+                    padding: 3px 7px;
+                    border-radius: 5px;
+                    transition: all 0.15s;
+                }}
+                .dossier-edit-btn:hover {{
+                    color: #fff;
+                    background: #272c3d;
+                    border-color: #3b445f;
+                }}
+                @media (max-width: 1350px) {{
+                    .ingame-dossier-panel {{ width: 290px; padding: 16px 12px; }}
+                }}
+                @media (max-width: 1100px) {{
+                    .ingame-shell {{ flex-direction: column; }}
+                    .ingame-sidebar, .ingame-dossier-panel {{ width: 100%; border-right: none; border-left: none; border-bottom: 1px solid #1a1e2b; }}
+                    .ingame-content {{ padding: 20px; }}
+                }}
+
                 @media (max-width: 900px) {{
                     .ingame-shell {{ flex-direction: column; }}
                     .ingame-sidebar {{ width: 100%; border-right: none; border-bottom: 1px solid #1a1e2b; }}
@@ -1581,6 +1670,91 @@ async def handle_libra(request: web.Request):
                         </div>
                     </div>
                 </main>
+
+                <!-- RIGHT VERTICAL PANEL: 3 IN-GAME & DISCORD DOSSIER DIVISIONS -->
+                <aside class="ingame-dossier-panel">
+                    <!-- DIVISION 1: GRAND RP (EN2) -->
+                    <div class="dossier-card card-grand">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div style="display: flex; align-items: center; gap: 7px;">
+                                <span style="font-size: 16px;">🌆</span>
+                                <span style="color: #60a5fa; font-weight: 900; font-size: 12px; letter-spacing: 0.8px; text-transform: uppercase;">GRAND RP (EN2)</span>
+                            </div>
+                            <button class="dossier-edit-btn" onclick="openDossierModal('grand')" title="Edit Grand RP Dossier">✏️ Edit</button>
+                        </div>
+                        <div style="font-size: 16px; font-weight: 800; color: #fff; margin-top: 8px;">
+                            {grand_char_name} <span style="font-size: 12px; color: #64748b; font-weight: 700;">#{grand_char_id}</span>
+                        </div>
+                        <div style="font-size: 13px; font-weight: 700; color: #93c5fd; margin-top: 2px; margin-bottom: 8px;">
+                            {grand_char_rank}
+                        </div>
+
+                        <div class="dossier-label">RECENT ACTIVITY</div>
+                        <div class="dossier-val" style="color: #cbd5e1;">{grand_act}</div>
+
+                        <div class="dossier-label">MEDALS & AWARDS (BY LEADER)</div>
+                        <div class="dossier-val" style="color: #f59e0b; font-weight: 700;">{grand_awards}</div>
+
+                        <div class="dossier-label">DISCIPLINARY RECORD</div>
+                        <div class="dossier-val" style="color: #22c55e; font-weight: 700;">{grand_punishments}</div>
+                    </div>
+
+                    <!-- DIVISION 2: LIBRA RP (FEDRIX) -->
+                    <div class="dossier-card card-libra">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div style="display: flex; align-items: center; gap: 7px;">
+                                <span style="font-size: 16px;">⚖️</span>
+                                <span style="color: #c084fc; font-weight: 900; font-size: 12px; letter-spacing: 0.8px; text-transform: uppercase;">LIBRA RP (FEDRIX)</span>
+                            </div>
+                            <button class="dossier-edit-btn" onclick="openDossierModal('libra')" title="Edit Libra RP Dossier">✏️ Edit</button>
+                        </div>
+                        <div style="font-size: 16px; font-weight: 800; color: #fff; margin-top: 8px;">
+                            {libra_char_name} <span style="font-size: 12px; color: #64748b; font-weight: 700;">ID #{libra_char_id}</span>
+                        </div>
+                        <div style="font-size: 13px; font-weight: 700; color: #d8b4fe; margin-top: 2px; margin-bottom: 8px;">
+                            {libra_char_rank}
+                        </div>
+
+                        <div class="dossier-label">RECENT ACTIVITY</div>
+                        <div class="dossier-val" style="color: #cbd5e1;">{libra_act}</div>
+
+                        <div class="dossier-label">MEDALS & AWARDS (BY LEADER)</div>
+                        <div class="dossier-val" style="color: #f59e0b; font-weight: 700;">{libra_awards}</div>
+
+                        <div class="dossier-label">DISCIPLINARY RECORD</div>
+                        <div class="dossier-val" style="color: #22c55e; font-weight: 700;">{libra_punishments}</div>
+                    </div>
+
+                    <!-- DIVISION 3: DISCORD DOSSIER -->
+                    <div class="dossier-card card-discord">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div style="display: flex; align-items: center; gap: 7px;">
+                                <span style="font-size: 16px;">🎮</span>
+                                <span style="color: #818cf8; font-weight: 900; font-size: 12px; letter-spacing: 0.8px; text-transform: uppercase;">DISCORD DOSSIER</span>
+                            </div>
+                            <button class="dossier-edit-btn" onclick="openDossierModal('discord')" title="Edit Discord Dossier">✏️ Edit</button>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px; margin-top: 8px;">
+                            <img src="{user['avatar_url']}" style="width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid #5865F2;">
+                            <div>
+                                <span style="font-size: 15px; font-weight: 800; color: #fff;">{discord_name}</span>
+                                <span style="font-size: 11px; color: #64748b; margin-left: 4px;">#{discord_id[-4:]}</span>
+                            </div>
+                        </div>
+                        <div style="font-size: 13px; font-weight: 700; color: #818cf8; margin-top: 2px; margin-bottom: 8px;">
+                            {discord_rank}
+                        </div>
+
+                        <div class="dossier-label">RECENT ACTIVITY</div>
+                        <div class="dossier-val" style="color: #cbd5e1;">{discord_act}</div>
+
+                        <div class="dossier-label">SERVER RECOGNITIONS</div>
+                        <div class="dossier-val" style="color: #f59e0b; font-weight: 700;">{discord_awards}</div>
+
+                        <div class="dossier-label">DISCIPLINARY RECORD</div>
+                        <div class="dossier-val" style="color: #22c55e; font-weight: 700;">{discord_punishments}</div>
+                    </div>
+                </aside>
             </div>
 
             <!-- MODAL 1: EDIT RANK -->
@@ -1716,10 +1890,127 @@ async def handle_libra(request: web.Request):
                 </div>
             </div>
 
+                        <!-- MODAL 6: EDIT DOSSIER -->
+            <div id="dossierModal" class="modal-backdrop">
+                <div class="card" style="max-width: 480px; width: 100%; border: 1.5px solid var(--accent); box-shadow: 0 16px 50px rgba(0,0,0,0.85); border-radius: 14px;">
+                    <h3 id="dossier-modal-title" style="color: #fff; font-size: 18px; font-weight: 900; margin-bottom: 4px;">✏️ Edit Operative Dossier</h3>
+                    <p style="color: #94a3b8; font-size: 13px; margin-bottom: 16px;">Update activity, awards, and disciplinary details</p>
+                    <input type="hidden" id="dossier-type">
+
+                    <div id="dossier-field-name-box">
+                        <label style="font-size: 11px; font-weight: 800; color: #94a3b8;">Character / Operative Name:</label>
+                        <input id="dossier-input-name" type="text">
+                    </div>
+
+                    <div id="dossier-field-id-box">
+                        <label style="font-size: 11px; font-weight: 800; color: #94a3b8;">In-Game ID / Number:</label>
+                        <input id="dossier-input-id" type="text">
+                    </div>
+
+                    <div id="dossier-field-rank-box">
+                        <label style="font-size: 11px; font-weight: 800; color: #94a3b8;">Rank / Title:</label>
+                        <input id="dossier-input-rank" type="text">
+                    </div>
+
+                    <label style="font-size: 11px; font-weight: 800; color: #94a3b8;">Recent Activity:</label>
+                    <input id="dossier-input-activity" type="text">
+
+                    <label style="font-size: 11px; font-weight: 800; color: #94a3b8;">Medals & Awards (By Leader):</label>
+                    <input id="dossier-input-awards" type="text">
+
+                    <label style="font-size: 11px; font-weight: 800; color: #94a3b8;">Disciplinary Record / Punishments:</label>
+                    <input id="dossier-input-punishments" type="text">
+
+                    <div style="display: flex; gap: 10px; margin-top: 10px;">
+                        <button class="btn btn-primary" style="flex: 1;" onclick="submitDossierEdit()">Save Changes</button>
+                        <button class="btn btn-secondary" onclick="closeModal('dossierModal')">Cancel</button>
+                    </div>
+                </div>
+            </div>
+
             <!-- TOAST BANNER -->
             <div id="toast-banner" style="display:none; position:fixed; bottom:24px; right:24px; background:#10131d; border:1.5px solid #22c55e; color:#fff; padding:14px 20px; border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,0.8); z-index:99999; font-weight:700; font-size:14px;"></div>
 
             <script>
+                                function openDossierModal(type) {{
+                    document.getElementById('dossier-type').value = type;
+                    let title = document.getElementById('dossier-modal-title');
+                    if (type === 'grand') {{
+                        title.innerText = '🌆 Edit Grand RP (EN2) Dossier';
+                        document.getElementById('dossier-input-name').value = "{grand_char_name}";
+                        document.getElementById('dossier-input-id').value = "{grand_char_id}";
+                        document.getElementById('dossier-input-rank').value = "{grand_char_rank}";
+                        document.getElementById('dossier-input-activity').value = "{grand_act}";
+                        document.getElementById('dossier-input-awards').value = "{grand_awards}";
+                        document.getElementById('dossier-input-punishments').value = "{grand_punishments}";
+                    }} else if (type === 'libra') {{
+                        title.innerText = '⚖️ Edit Libra RP (Fedrix) Dossier';
+                        document.getElementById('dossier-input-name').value = "{libra_char_name}";
+                        document.getElementById('dossier-input-id').value = "{libra_char_id}";
+                        document.getElementById('dossier-input-rank').value = "{libra_char_rank}";
+                        document.getElementById('dossier-input-activity').value = "{libra_act}";
+                        document.getElementById('dossier-input-awards').value = "{libra_awards}";
+                        document.getElementById('dossier-input-punishments').value = "{libra_punishments}";
+                    }} else if (type === 'discord') {{
+                        title.innerText = '🎮 Edit Discord Operative Dossier';
+                        document.getElementById('dossier-input-name').value = "{discord_name}";
+                        document.getElementById('dossier-input-id').value = "{discord_id}";
+                        document.getElementById('dossier-input-rank').value = "{discord_rank}";
+                        document.getElementById('dossier-input-activity').value = "{discord_act}";
+                        document.getElementById('dossier-input-awards').value = "{discord_awards}";
+                        document.getElementById('dossier-input-punishments').value = "{discord_punishments}";
+                    }}
+                    openModal('dossierModal');
+                }}
+
+                async function submitDossierEdit() {{
+                    let type = document.getElementById('dossier-type').value;
+                    let payload = {{}};
+                    let name = document.getElementById('dossier-input-name').value;
+                    let id = document.getElementById('dossier-input-id').value;
+                    let rank = document.getElementById('dossier-input-rank').value;
+                    let act = document.getElementById('dossier-input-activity').value;
+                    let awards = document.getElementById('dossier-input-awards').value;
+                    let punishments = document.getElementById('dossier-input-punishments').value;
+
+                    if (type === 'grand') {{
+                        payload = {{
+                            grand_member_name: name,
+                            grand_member_id: id,
+                            grand_rank: rank,
+                            grand_recent_activity: act,
+                            grand_awards: awards,
+                            grand_punishments: punishments
+                        }};
+                    }} else if (type === 'libra') {{
+                        payload = {{
+                            libra_recent_activity: act,
+                            libra_awards: awards,
+                            libra_punishments: punishments
+                        }};
+                    }} else if (type === 'discord') {{
+                        payload = {{
+                            discord_rank: rank,
+                            discord_recent_activity: act,
+                            discord_awards: awards,
+                            discord_punishments: punishments
+                        }};
+                    }}
+
+                    let res = await fetch('/api/user/dossier', {{
+                        method: 'POST',
+                        headers: {{'Content-Type': 'application/json'}},
+                        body: JSON.stringify(payload)
+                    }});
+                    let d = await res.json();
+                    if (d.success) {{
+                        showToast("Dossier updated successfully!");
+                        setTimeout(() => location.reload(), 600);
+                    }} else {{
+                        alert("Error: " + d.error);
+                    }}
+                }}
+
                 function switchTab(tab) {{
                     document.getElementById('view-members').style.display = tab === 'members' ? 'block' : 'none';
                     document.getElementById('view-ranks').style.display = tab === 'ranks' ? 'block' : 'none';
@@ -2229,6 +2520,15 @@ async def api_user_link_profiles(request: web.Request):
         traceback.print_exc()
         return web.json_response({"success": False, "error": str(e)})
 
+async def api_user_dossier(request: web.Request):
+    user = require_user(request)
+    try:
+        data = await request.json()
+        db.update_user_dossier(user["id"], data)
+        return web.json_response({"success": True})
+    except Exception as e:
+        return web.json_response({"success": False, "error": str(e)})
+
 async def handle_logo(request: web.Request):
     logo_path = os.path.join(os.path.dirname(__file__), "static", "logo.png")
     if os.path.exists(logo_path):
@@ -2266,5 +2566,6 @@ def create_web_app():
     app.router.add_post("/api/libra/member/add", api_libra_member_add)
     app.router.add_post("/api/libra/link_profile", api_libra_link_profile)
     app.router.add_post("/api/user/link_profiles", api_user_link_profiles)
+    app.router.add_post("/api/user/dossier", api_user_dossier)
 
     return app

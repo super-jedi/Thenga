@@ -194,6 +194,26 @@ def init_db():
         cursor.execute("ALTER TABLE user_profiles ADD COLUMN libra_member_id INTEGER")
     if "grand_member_name" not in cols:
         cursor.execute("ALTER TABLE user_profiles ADD COLUMN grand_member_name TEXT")
+    
+    dossier_cols = [
+        ("grand_member_id", "TEXT DEFAULT '7104'"),
+        ("grand_recent_activity", "TEXT DEFAULT 'Pineapple Plantation Harvest Banked • Active Fleet Operative'"),
+        ("grand_awards", "TEXT DEFAULT '🎖️ Malayali Club Honor Medal • 🌟 Top Plantation Tycoon'"),
+        ("grand_punishments", "TEXT DEFAULT 'Clean Record (0 Active Warnings)'"),
+        ("libra_recent_activity", "TEXT DEFAULT '● Online now • Fedrix Clan Operations'"),
+        ("libra_awards", "TEXT DEFAULT '⚔️ Fedrix Vanguard Cross • 🏆 Master Turf Tactician'"),
+        ("libra_punishments", "TEXT DEFAULT 'Good Standing (0 Suspensions)'"),
+        ("discord_rank", "TEXT DEFAULT '👑 High Command Staff'"),
+        ("discord_recent_activity", "TEXT DEFAULT 'Authenticated via OAuth2 • Command Center Active'"),
+        ("discord_awards", "TEXT DEFAULT '⭐ Server Creator • 🛡️ Bot Administrator'"),
+        ("discord_punishments", "TEXT DEFAULT 'Clean Record (0 Mutes / Warnings)'")
+    ]
+    for c_name, c_def in dossier_cols:
+        if c_name not in cols:
+            try:
+                cursor.execute(f"ALTER TABLE user_profiles ADD COLUMN {c_name} {c_def}")
+            except Exception:
+                pass
 
     # 6. Libra RP Ranks Hierarchy
     cursor.execute("""
@@ -508,6 +528,28 @@ def update_user_ranks(user_id: str, grand_rank: str, libra_rank: str) -> bool:
     WHERE user_id = ?
     """, (grand_rank.strip(), libra_rank.strip(), str(user_id)))
     conn.commit()
+    conn.close()
+    return True
+
+def update_user_dossier(user_id: str, dossier_data: dict) -> bool:
+    conn = get_connection()
+    allowed_keys = [
+        "grand_member_name", "grand_member_id", "grand_rank", "grand_recent_activity", "grand_awards", "grand_punishments",
+        "libra_recent_activity", "libra_awards", "libra_punishments",
+        "discord_rank", "discord_recent_activity", "discord_awards", "discord_punishments"
+    ]
+    set_clauses = []
+    values = []
+    for k, v in dossier_data.items():
+        if k in allowed_keys:
+            set_clauses.append(f"{k} = ?")
+            values.append(str(v).strip())
+    
+    if set_clauses:
+        values.append(str(user_id))
+        query = f"UPDATE user_profiles SET {', '.join(set_clauses)}, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?"
+        conn.execute(query, values)
+        conn.commit()
     conn.close()
     return True
 
