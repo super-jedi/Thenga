@@ -25,11 +25,7 @@ YTDL_OPTIONS = {
     'default_search': 'ytsearch',
     'cachedir': False,
     'skip_download': True,
-    'extractor_args': {
-        'youtube': {
-            'player_client': ['android', 'web']
-        }
-    },
+    'js_runtimes': {'node': {}, 'deno': {}},
 }
 
 FFMPEG_OPTIONS = {
@@ -45,9 +41,10 @@ class Track:
         self.requester = requester
         self.title = data.get('title', 'Unknown Title')
         self.webpage_url = data.get('webpage_url') or data.get('original_url') or data.get('url', '')
+        self.headers = data.get('http_headers', {})
         stream_url = data.get('url', '')
         if not stream_url and 'formats' in data:
-            audio_formats = [f for f in data['formats'] if f.get('acodec') != 'none' and (f.get('vcodec') == 'none' or not f.get('vcodec'))]
+            audio_formats = [f for f in data['formats'] if f.get('acodec') != 'none']
             if audio_formats:
                 stream_url = audio_formats[-1].get('url', '')
             elif data['formats']:
@@ -74,7 +71,7 @@ class GuildPlayer:
         self.queue: deque[Track] = deque()
         self.current: Optional[Track] = None
         self.voice_client: Optional[discord.VoiceClient] = None
-        self.volume: float = 0.8
+        self.volume: float = 1.0
         self.loop_mode: str = "off" # "off", "song", "queue"
         self.next_event = asyncio.Event()
         self.audio_task: Optional[asyncio.Task] = None
@@ -107,33 +104,44 @@ class GuildPlayer:
                 self.current = track
 
             try:
-                # Refresh stream URL if needed
-                loop = asyncio.get_event_loop()
-                data = await loop.run_in_executor(
-                    None,
-                    functools.partial(ytdl.extract_info, track.webpage_url, download=False)
-                )
-                stream_url = data.get('url')
-                if not stream_url and 'formats' in data:
-                    audio_formats = [f for f in data['formats'] if f.get('acodec') != 'none' and (f.get('vcodec') == 'none' or not f.get('vcodec'))]
-                    if audio_formats:
-                        stream_url = audio_formats[-1].get('url')
-                    elif data['formats']:
-                        stream_url = data['formats'][-1].get('url')
-                if not stream_url:
-                    stream_url = track.stream_url
+                stream_url = track.stream_url
+                headers = getattr(track, 'headers', {})
 
-                source = discord.FFmpegPCMAudio(stream_url, **FFMPEG_OPTIONS)
+                # Only refresh if stream_url is missing
+                if not stream_url:
+                    loop = asyncio.get_event_loop()
+                    data = await loop.run_in_executor(
+                        None,
+                        functools.partial(ytdl.extract_info, track.webpage_url, download=False)
+                    )
+                    stream_url = data.get('url')
+                    if not stream_url and 'formats' in data:
+                        audio_formats = [f for f in data['formats'] if f.get('acodec') != 'none']
+                        if audio_formats:
+                            stream_url = audio_formats[-1].get('url')
+                        elif data['formats']:
+                            stream_url = data['formats'][-1].get('url')
+                    headers = data.get('http_headers', {})
+
+                header_str = ''.join(f"{k}: {v}\r\n" for k, v in headers.items()) if headers else ""
+                before_opts = '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5'
+                if header_str:
+                    before_opts += f' -headers {repr(header_str)}'
+
+                print(f"[Music] Playing '{track.title}' in guild {self.guild_id} (volume: {self.volume})")
+                source = discord.FFmpegPCMAudio(stream_url, before_options=before_opts, options='-vn')
                 transformed_source = discord.PCMVolumeTransformer(source, volume=self.volume)
 
                 def after_playing(err):
                     if err:
-                        print(f"Player error in guild {self.guild_id}: {err}")
+                        print(f"[Player Error] in guild {self.guild_id}: {err}")
                     self.bot.loop.call_soon_threadsafe(self.next_event.set)
 
                 self.voice_client.play(transformed_source, after=after_playing)
             except Exception as e:
+                import traceback
                 print(f"Error starting playback in guild {self.guild_id}: {e}")
+                traceback.print_exc()
                 self.next_event.set()
 
             await self.next_event.wait()
