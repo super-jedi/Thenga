@@ -1249,12 +1249,6 @@ def render_app_shell(
         '<span class="badge badge-green">VERIFIED OPERATIVE</span>'
     )
 
-    grand_primary_pill = '<span class="persona-tag">Primary persona</span>' if primary_persona == 'grandrp' else '<button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); setPrimaryPersona(\'grandrp\')">Set as primary</button>'
-    libra_primary_pill = '<span class="persona-tag">Primary persona</span>' if primary_persona == 'librarp' else '<button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); setPrimaryPersona(\'librarp\')">Set as primary</button>'
-    grand_drop_primary = '<span class="persona-tag">Primary</span>' if primary_persona == 'grandrp' else ''
-    libra_drop_primary = '<span class="persona-tag">Primary</span>' if primary_persona == 'librarp' else ''
-    grand_sel = 'selected' if primary_persona == 'grandrp' else ''
-    libra_sel = 'selected' if primary_persona == 'librarp' else ''
     main_layout_html = f'<div class="hub-layout"><main>{main_content}</main><aside class="right-rail-wrap">{right_rail}</aside></div>' if right_rail else f'<main>{main_content}</main>'
 
     shell_html = f"""<!DOCTYPE html>
@@ -1292,30 +1286,12 @@ def render_app_shell(
                     <span class="nav-label">Libra RP • Fedrix</span>
                 </a>
 
-                <div class="nav-section-label">MANAGEMENT</div>
-                <a href="/grand?tab=treasury" class="nav-item">
-                    <span class="nav-icon">💰</span>
-                    <span class="nav-label">Treasury</span>
-                </a>
-                <a href="/grand?tab=fleet" class="nav-item">
-                    <span class="nav-icon">🚗</span>
-                    <span class="nav-label">Fleet</span>
-                </a>
-                <a href="/libra?tab=events" class="nav-item">
-                    <span class="nav-icon">📅</span>
-                    <span class="nav-label">Events</span>
-                </a>
-                <a href="/libra?tab=members" class="nav-item">
-                    <span class="nav-icon">👥</span>
-                    <span class="nav-label">People</span>
-                </a>
-
                 <div class="nav-section-label">SYSTEM</div>
-                <a href="javascript:openPersonasModal()" class="nav-item">
+                <a href="javascript:openAccountsModal()" class="nav-item">
                     <span class="nav-icon">🔗</span>
-                    <span class="nav-label">Linked Personas</span>
+                    <span class="nav-label">Linked Accounts</span>
                 </a>
-                <a href="javascript:openPersonasModal()" class="nav-item">
+                <a href="javascript:openAccountsModal()" class="nav-item">
                     <span class="nav-icon">⚙️</span>
                     <span class="nav-label">Settings</span>
                 </a>
@@ -1364,18 +1340,16 @@ def render_app_shell(
                             <div style="margin-top:6px;">{role_badge}</div>
                         </div>
                         <div style="font-size:11px; font-weight:800; color:var(--text-dim); text-transform:uppercase; padding:4px 8px;">
-                            Linked Personas (2)
+                            Linked Accounts (2)
                         </div>
                         <div style="font-size:12px; color:var(--text-muted); padding:4px 8px; display:flex; justify-content:space-between; align-items:center;">
                             <span>🌆 Grand: {grand_name}</span>
-                            {grand_drop_primary}
                         </div>
                         <div style="font-size:12px; color:var(--text-muted); padding:4px 8px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-subtle); margin-bottom:8px; padding-bottom:8px;">
                             <span>⚖️ Libra: {libra_name}</span>
-                            {libra_drop_primary}
                         </div>
-                        <button class="dropdown-item" onclick="openPersonasModal()">🔗 Manage Linked Personas</button>
-                        <button class="dropdown-item" onclick="openPersonasModal()">⚙️ Account Settings</button>
+                        <button class="dropdown-item" onclick="openAccountsModal()">🔗 Manage Linked Accounts</button>
+                        <button class="dropdown-item" onclick="openAccountsModal()">⚙️ Account Settings</button>
                         <a href="/auth/logout" class="dropdown-item" style="color:#ef4444;">🚪 Sign out</a>
                     </div>
                 </div>
@@ -1401,52 +1375,43 @@ def render_app_shell(
                 <span>⚖️</span>
                 Libra RP
             </a>
-            <button class="mobile-nav-btn" onclick="openPersonasModal()">
+            <button class="mobile-nav-btn" onclick="openAccountsModal()">
                 <span>👤</span>
-                Profile
+                Accounts
             </button>
         </nav>
     </div>
 
     <!-- ==================== FIGMA MODALS & DIALOGS (figma_1_11) ==================== -->
 
-    <!-- 1. LINKED PERSONAS MANAGER MODAL (Figma State 2) -->
+    <!-- 1. LINKED ACCOUNTS MANAGER MODAL -->
     <div id="personasModal" class="modal-backdrop">
         <div class="modal-card">
             <div class="modal-header">
                 <div>
-                    <h2 class="modal-title">Linked personas</h2>
+                    <h2 class="modal-title">Linked Accounts</h2>
                     <p style="font-size:12px; color:var(--text-muted); margin-top:2px;">Manage your connected game identities across our supported servers.</p>
                 </div>
                 <button class="modal-close-btn" onclick="closeModal('personasModal')">✕</button>
             </div>
 
-            <!-- Current Personas Summary -->
-            <div style="font-size:11px; font-weight:800; color:var(--text-dim); text-transform:uppercase; margin-bottom:6px;">Your linked personas</div>
-            <div class="persona-item" onclick="setPrimaryPersona('grandrp')">
+            <!-- Current Accounts Summary -->
+            <div style="font-size:11px; font-weight:800; color:var(--text-dim); text-transform:uppercase; margin-bottom:6px;">Connected Accounts</div>
+            <div class="persona-item">
                 <div class="persona-avatar">🌆</div>
-                <div>
+                <div style="flex:1;">
                     <div style="font-weight:700; font-size:13px; color:#fff;">{grand_name}</div>
                     <div style="font-size:11px; color:var(--text-dim);">Grand RP • EN2 • {grand_rank}</div>
                 </div>
-                {grand_primary_pill}
             </div>
 
-            <div class="persona-item" onclick="setPrimaryPersona('librarp')" style="margin-bottom:18px;">
+            <div class="persona-item" style="margin-bottom:18px;">
                 <div class="persona-avatar">⚖️</div>
-                <div>
+                <div style="flex:1;">
                     <div style="font-weight:700; font-size:13px; color:#fff;">{libra_name} (ID #{libra_id})</div>
                     <div style="font-size:11px; color:var(--text-dim);">Libra RP • Fedrix • {libra_rank}</div>
                 </div>
-                {libra_primary_pill}
             </div>
-
-            <!-- Primary Persona Dropdown Selector -->
-            <label style="font-size:11px; font-weight:800; color:var(--text-dim); text-transform:uppercase;">Primary persona</label>
-            <select id="modal-primary-select" onchange="setPrimaryPersona(this.value)">
-                <option value="grandrp" {grand_sel}>Grand RP — {grand_name}</option>
-                <option value="librarp" {libra_sel}>Libra RP — {libra_name}</option>
-            </select>
 
             <div style="border-top:1px solid var(--border-subtle); padding-top:14px; margin-top:6px;">
                 <label style="font-size:11px; font-weight:800; color:var(--accent-blue); text-transform:uppercase;">Grand RP (EN2 Character):</label>
@@ -1458,8 +1423,8 @@ def render_app_shell(
                 </select>
             </div>
 
-            <div style="display:flex; gap:10px; margin-top:8px;">
-                <button id="btn-save-personas-modal" class="btn btn-green" style="flex:1;" onclick="submitSavePersonas()">Save & Link personas</button>
+            <div style="display:flex; gap:10px; margin-top:14px;">
+                <button id="btn-save-personas-modal" class="btn btn-green" style="flex:1;" onclick="submitSaveAccounts()">Save & Link Accounts</button>
                 <button class="btn btn-secondary" onclick="closeModal('personasModal')">Cancel</button>
             </div>
         </div>
@@ -1739,28 +1704,12 @@ def render_app_shell(
             }}
         }});
 
-        function openPersonasModal() {{
+        function openAccountsModal() {{
             openModal('personasModal');
         }}
+        window.openPersonasModal = openAccountsModal;
 
-        async function setPrimaryPersona(server) {{
-            try {{
-                let res = await fetch('/api/user/set_primary_persona', {{
-                    method: 'POST',
-                    headers: {{'Content-Type': 'application/json'}},
-                    body: JSON.stringify({{ server: server }})
-                }});
-                let d = await res.json();
-                if (d.success) {{
-                    showToast("Primary persona switched to " + (server === 'grandrp' ? 'Grand RP (EN2)' : 'Libra RP (Fedrix)'));
-                    setTimeout(() => location.reload(), 600);
-                }}
-            }} catch(e) {{
-                alert("Error: " + e);
-            }}
-        }}
-
-        async function submitSavePersonas() {{
+        async function submitSaveAccounts() {{
             let btn = document.getElementById('btn-save-personas-modal');
             if (btn) btn.innerText = "⏳ Saving...";
             try {{
@@ -1773,17 +1722,18 @@ def render_app_shell(
                 }});
                 let d = await res.json();
                 if (d.success) {{
-                    showToast("Personas saved successfully!");
+                    showToast("Accounts linked successfully!");
                     setTimeout(() => location.reload(), 600);
                 }} else {{
-                    alert(d.error || "Failed to save personas");
-                    if (btn) btn.innerText = "Save & Link personas";
+                    alert(d.error || "Failed to save accounts");
+                    if (btn) btn.innerText = "Save & Link Accounts";
                 }}
             }} catch(err) {{
                 alert("Error: " + err);
-                if (btn) btn.innerText = "Save & Link personas";
+                if (btn) btn.innerText = "Save & Link Accounts";
             }}
         }}
+        window.submitSavePersonas = submitSaveAccounts;
 
         function onRankSelectChange(lvl) {{
             let list = document.getElementById('rank-responsibilities-list');
@@ -1978,7 +1928,9 @@ def render_app_shell(
             }} catch(e) {{ alert("Error: " + e); }}
         }}
     </script>
-    {extra_scripts}
+    <script>
+        {extra_scripts}
+    </script>
 </body>
 </html>
 """
@@ -2177,33 +2129,33 @@ async def handle_home(request: web.Request):
         </button>
     </div>
 
-    <!-- Linked Personas Manager Card (figma_3_2_1080p & figma_1_11) -->
+    <!-- Linked Accounts Card -->
     <div class="profile-card">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-            <span style="font-size:11px; font-weight:800; color:var(--text-dim); text-transform:uppercase;">Linked personas</span>
+            <span style="font-size:11px; font-weight:800; color:var(--text-dim); text-transform:uppercase;">Linked Accounts</span>
             <span style="font-size:11px; color:var(--text-muted); font-weight:700;">2 Connected</span>
         </div>
 
-        <div class="persona-item" onclick="openPersonasModal()">
+        <div class="persona-item" onclick="openAccountsModal()">
             <div class="persona-avatar">🌆</div>
-            <div>
+            <div style="flex:1;">
                 <div style="font-weight:700; font-size:13px; color:#fff;">{grand_name}</div>
                 <div style="font-size:11px; color:var(--text-dim);">Grand RP • EN2</div>
             </div>
-            {'<span class="persona-tag">Primary</span>' if primary_persona == 'grandrp' else '<span style="color:var(--text-dim); font-size:13px; margin-left:auto;">&gt;</span>'}
+            <span style="color:var(--text-dim); font-size:13px; margin-left:auto;">&gt;</span>
         </div>
 
-        <div class="persona-item" onclick="openPersonasModal()">
+        <div class="persona-item" onclick="openAccountsModal()">
             <div class="persona-avatar">⚖️</div>
-            <div>
+            <div style="flex:1;">
                 <div style="font-weight:700; font-size:13px; color:#fff;">{libra_name}</div>
                 <div style="font-size:11px; color:var(--text-dim);">Libra RP • Fedrix</div>
             </div>
-            {'<span class="persona-tag">Primary</span>' if primary_persona == 'librarp' else '<span style="color:var(--text-dim); font-size:13px; margin-left:auto;">&gt;</span>'}
+            <span style="color:var(--text-dim); font-size:13px; margin-left:auto;">&gt;</span>
         </div>
 
-        <button class="btn btn-secondary btn-sm" style="width:100%; margin-top:12px; border-style:dashed;" onclick="openPersonasModal()">
-            + Link persona
+        <button class="btn btn-secondary btn-sm" style="width:100%; margin-top:12px; border-style:dashed;" onclick="openAccountsModal()">
+            + Link Account
         </button>
     </div>
 
@@ -3486,28 +3438,28 @@ async def handle_libra(request: web.Request):
         let title = document.getElementById('dossier-modal-title');
         if (type === 'grand') {{
             title.innerText = '🌆 Edit Grand RP (EN2) Dossier';
-            document.getElementById('dossier-input-name').value = "{grand_char_name}";
-            document.getElementById('dossier-input-id').value = "{grand_char_id}";
-            document.getElementById('dossier-input-rank').value = "{grand_char_rank}";
-            document.getElementById('dossier-input-activity').value = "{grand_act}";
-            document.getElementById('dossier-input-awards').value = "{grand_awards}";
-            document.getElementById('dossier-input-punishments').value = "{grand_punishments}";
+            document.getElementById('dossier-input-name').value = {json.dumps(grand_char_name)};
+            document.getElementById('dossier-input-id').value = {json.dumps(grand_char_id)};
+            document.getElementById('dossier-input-rank').value = {json.dumps(grand_char_rank)};
+            document.getElementById('dossier-input-activity').value = {json.dumps(grand_act)};
+            document.getElementById('dossier-input-awards').value = {json.dumps(grand_awards)};
+            document.getElementById('dossier-input-punishments').value = {json.dumps(grand_punishments)};
         }} else if (type === 'libra') {{
             title.innerText = '⚖️ Edit Libra RP (Fedrix) Dossier';
-            document.getElementById('dossier-input-name').value = "{libra_char_name}";
-            document.getElementById('dossier-input-id').value = "{libra_char_id}";
-            document.getElementById('dossier-input-rank').value = "{libra_char_rank}";
-            document.getElementById('dossier-input-activity').value = "{libra_act}";
-            document.getElementById('dossier-input-awards').value = "{libra_awards}";
-            document.getElementById('dossier-input-punishments').value = "{libra_punishments}";
+            document.getElementById('dossier-input-name').value = {json.dumps(libra_char_name)};
+            document.getElementById('dossier-input-id').value = {json.dumps(libra_char_id)};
+            document.getElementById('dossier-input-rank').value = {json.dumps(libra_char_rank)};
+            document.getElementById('dossier-input-activity').value = {json.dumps(libra_act)};
+            document.getElementById('dossier-input-awards').value = {json.dumps(libra_awards)};
+            document.getElementById('dossier-input-punishments').value = {json.dumps(libra_punishments)};
         }} else if (type === 'discord') {{
             title.innerText = '🎮 Edit Discord Operative Dossier';
-            document.getElementById('dossier-input-name').value = "{discord_name}";
-            document.getElementById('dossier-input-id').value = "{discord_id}";
-            document.getElementById('dossier-input-rank').value = "{discord_rank}";
-            document.getElementById('dossier-input-activity').value = "{discord_act}";
-            document.getElementById('dossier-input-awards').value = "{discord_awards}";
-            document.getElementById('dossier-input-punishments').value = "{discord_punishments}";
+            document.getElementById('dossier-input-name').value = {json.dumps(discord_name)};
+            document.getElementById('dossier-input-id').value = {json.dumps(discord_id)};
+            document.getElementById('dossier-input-rank').value = {json.dumps(discord_rank)};
+            document.getElementById('dossier-input-activity').value = {json.dumps(discord_act)};
+            document.getElementById('dossier-input-awards').value = {json.dumps(discord_awards)};
+            document.getElementById('dossier-input-punishments').value = {json.dumps(discord_punishments)};
         }}
         openModal('dossierModal');
     }}
@@ -3561,15 +3513,19 @@ async def handle_libra(request: web.Request):
     }}
 
     function switchTab(tab) {{
-        document.getElementById('view-members').style.display = tab === 'members' ? 'block' : 'none';
-        document.getElementById('view-ranks').style.display = tab === 'ranks' ? 'block' : 'none';
-        document.getElementById('view-vehicles').style.display = tab === 'vehicles' ? 'block' : 'none';
-        document.getElementById('view-events').style.display = tab === 'events' ? 'block' : 'none';
-        document.getElementById('view-logs').style.display = tab === 'logs' ? 'block' : 'none';
-
-        document.querySelectorAll('.subtab-pill').forEach(b => b.classList.remove('active'));
-        let activeBtn = document.getElementById('libra-tab-' + tab);
-        if (activeBtn) activeBtn.classList.add('active');
+        const tabs = ['members', 'ranks', 'vehicles', 'events', 'logs'];
+        tabs.forEach(t => {{
+            const el = document.getElementById('view-' + t);
+            if (el) el.style.display = (t === tab) ? 'block' : 'none';
+            const btn = document.getElementById('libra-tab-' + t);
+            if (btn) {{
+                if (t === tab) btn.classList.add('active');
+                else btn.classList.remove('active');
+            }}
+        }});
+        try {{
+            history.replaceState(null, '', '/libra?tab=' + tab);
+        }} catch(e) {{}}
     }}
 
     // Activate initial tab from URL parameter
