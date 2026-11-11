@@ -70,6 +70,47 @@ class Track:
             return f"{hours}:{mins:02d}:{secs:02d}"
         return f"{mins}:{secs:02d}"
 
+
+class _AudioDiagnostics(discord.AudioSource):
+    """Pass audio through while reporting whether the first frames contain PCM."""
+
+    def __init__(self, source: discord.AudioSource):
+        self.original = source
+        self._frames = 0
+        self._non_silent_frames = 0
+        self._reported = False
+
+    def read(self) -> bytes:
+        data = self.original.read()
+        if data:
+            self._frames += 1
+            if any(data):
+                self._non_silent_frames += 1
+        if not self._reported and (self._frames >= 10 or not data):
+            print(
+                f"[Music Audio] First frames: {self._frames}; "
+                f"non-silent: {self._non_silent_frames}; "
+                f"last frame bytes: {len(data)}"
+            )
+            self._reported = True
+        return data
+
+    def is_opus(self) -> bool:
+        return self.original.is_opus()
+
+    def cleanup(self) -> None:
+        self.original.cleanup()
+
+    @property
+    def _current_error(self):
+        source = self.original
+        while source is not None:
+            error = getattr(source, "_current_error", None)
+            if error:
+                return error
+            source = getattr(source, "original", None)
+        return None
+
 class GuildPlayer:
     def __init__(self, bot: commands.Bot, guild_id: int):
         self.bot = bot
@@ -170,7 +211,9 @@ class GuildPlayer:
                     print(f"[Music] Playing cached '{track.title}' ({os.path.getsize(filepath)} bytes) in guild {self.guild_id}")
                     source = discord.FFmpegPCMAudio(filepath, executable=ffmpeg_exe, options='-vn')
 
-                transformed_source = discord.PCMVolumeTransformer(source, volume=self.volume)
+                transformed_source = _AudioDiagnostics(
+                    discord.PCMVolumeTransformer(source, volume=self.volume)
+                )
 
                 def after_playing(err):
                     if err:
@@ -256,6 +299,20 @@ class Music(commands.Cog):
         voice_client = await self._ensure_voice(interaction)
         if not voice_client:
             return
+
+        bot_member = interaction.guild.me
+        voice_state = bot_member.voice if bot_member else None
+        speak_allowed = voice_client.channel.permissions_for(bot_member).speak if bot_member else None
+        print(
+            "[Music Voice] "
+            f"connected={voice_client.is_connected()} "
+            f"speak_allowed={speak_allowed} "
+            f"server_muted={getattr(voice_state, 'mute', None)} "
+            f"self_muted={getattr(voice_state, 'self_mute', None)} "
+            f"server_deafened={getattr(voice_state, 'deaf', None)} "
+            f"self_deafened={getattr(voice_state, 'self_deaf', None)} "
+            f"opus_loaded={discord.opus.is_loaded()}"
+        )
 
         player = self.get_player(interaction.guild_id)
         player.start(voice_client)

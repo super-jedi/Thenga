@@ -1,5 +1,6 @@
 import os
 import asyncio
+import logging
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -7,6 +8,16 @@ load_dotenv()
 from aiohttp import web
 import discord
 from discord.ext import commands
+
+# Surface Discord's otherwise-hidden voice UDP send failures during local
+# playback diagnostics (for example, Windows firewall or UDP socket errors).
+voice_logger = logging.getLogger("discord.voice_client")
+voice_logger.setLevel(logging.DEBUG)
+if not voice_logger.handlers:
+    voice_handler = logging.StreamHandler()
+    voice_handler.setFormatter(logging.Formatter("[%(levelname)s] %(name)s: %(message)s"))
+    voice_logger.addHandler(voice_handler)
+voice_logger.propagate = False
 
 import database as db
 from web_server import create_web_app
@@ -27,8 +38,9 @@ COGS = [
     "cogs.grand",
     "cogs.libra",
     "cogs.moderation",
-    "cogs.music",
-    "cogs.voice_notes"
+    # Temporarily hidden per user request:
+    # "cogs.music",
+    # "cogs.voice_notes"
 ]
 
 @bot.event
