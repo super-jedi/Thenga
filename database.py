@@ -26,7 +26,7 @@ def init_db():
     """)
 
     # Seed initial balances for GrandRP and LibraRP if not present
-    cursor.execute("INSERT OR IGNORE INTO bank_balances (server, balance, total_deposited, total_withdrawn, total_tax_paid) VALUES ('grandrp', 0.0, 0.0, 0.0, 0.0)")
+    cursor.execute("INSERT OR IGNORE INTO bank_balances (server, balance, total_deposited, total_withdrawn, total_tax_paid) VALUES ('grandrp', 28454644.0, 0.0, 0.0, 0.0)")
     cursor.execute("INSERT OR IGNORE INTO bank_balances (server, balance, total_deposited, total_withdrawn, total_tax_paid) VALUES ('librarp', 0.0, 0.0, 0.0, 0.0)")
 
     # 2. Bank Transactions
@@ -73,6 +73,50 @@ def init_db():
         added_by TEXT
     )
     """)
+
+    # Seed initial vehicles if table is empty
+    vehicle_count = cursor.execute("SELECT COUNT(*) FROM vehicles").fetchone()[0]
+    if vehicle_count == 0:
+        initial_fleet = [
+            # Screenshot 1
+            ('grandrp', 'Coil Aleron Cabrio', '5JCS268', 'GrandRP Garage', 'superjedi'),
+            ('grandrp', 'Ubermacht Arclight R', '1MIP449', 'GrandRP Garage', 'superjedi'),
+            ('grandrp', 'Granger', '1ALG256', 'GrandRP Garage', 'superjedi'),
+            ('grandrp', 'Buzzard (Helicopter)', 'BUZZARD', 'Family Aircraft', 'superjedi'),
+            ('grandrp', 'Truffade Éclat', 'OVER111', 'GrandRP Garage', 'superjedi'),
+            ('grandrp', 'Coil Zenith Blackline', 'ZENITH-01', 'Default / Unplated', 'superjedi'),
+            ('grandrp', 'Ubermacht Summit Signature', 'SUMMIT-01', 'Default / Unplated', 'superjedi'),
+            ('grandrp', 'Obey Sirocco V6', 'SIROCCO-01', 'Default / Unplated', 'superjedi'),
+            ('grandrp', 'Declasse Torven Cabrio', 'TORVEN-01', 'Default / Unplated', 'superjedi'),
+            ('grandrp', 'Declasse Vigero ZX', 'VIGERO-01', 'Default / Unplated', 'superjedi'),
+            ('grandrp', 'Obey Sirocco V6', 'SIROCCO-02', 'Default / Unplated', 'superjedi'),
+            ('grandrp', 'Declasse Aurelia Touring', 'AURELIA-01', 'Default / Unplated', 'superjedi'),
+            # Screenshot 2
+            ('grandrp', 'Ubermacht Apex R-Spec', '6VYI947', 'GrandRP Garage', 'superjedi'),
+            ('grandrp', 'Obey Sirocco V6', 'SIROCCO-03', 'Default / Unplated', 'superjedi'),
+            ('grandrp', 'Bodhi', 'BODHI-01', 'Family Truck - Unplated', 'superjedi'),
+            ('grandrp', 'Bodhi', 'BODHI-02', 'Family Truck - Unplated', 'superjedi'),
+            ('grandrp', 'Bodhi', 'BODHI-03', 'Family Truck - Unplated', 'superjedi'),
+            ('grandrp', 'Coil Vespera 4x4', '0JED125', 'Custom Jedi Plate', 'superjedi'),
+            ('grandrp', 'Ubermacht Valora GTS', '0JED124', 'Custom Jedi Plate', 'superjedi'),
+            ('grandrp', 'Annis Novus Blackline', 'NOVUS-01', 'Default / Unplated', 'superjedi'),
+            ('grandrp', 'Declasse Atlas', '0JED123', 'Custom Jedi Plate', 'superjedi'),
+            ('grandrp', 'Ubermacht Revenant Touring', '0JED107', 'Custom Jedi Plate', 'superjedi'),
+            ('grandrp', 'Progen Helix Roadster', '0JED100', 'Custom Jedi Plate', 'superjedi'),
+            ('grandrp', 'Bodhi', '4FYR239', 'Family Truck', 'superjedi'),
+            # Screenshot 3
+            ('grandrp', 'Bodhi', '9QEW655', 'Family Truck', 'superjedi'),
+            ('grandrp', 'Bodhi', '2UJU654', 'Family Truck', 'superjedi'),
+            ('grandrp', 'Bodhi', '8KGF153', 'Family Truck', 'superjedi'),
+            ('grandrp', 'Bodhi', '2YTH244', 'Family Truck', 'superjedi'),
+            ('grandrp', 'Rebel', '8IZQ234', 'Family Truck', 'superjedi'),
+            ('grandrp', 'Bodhi', '9ZIY573', 'Family Truck', 'superjedi'),
+            ('grandrp', 'Rusty Rebel', '4CAG723', 'Family Truck', 'superjedi')
+        ]
+        cursor.executemany("""
+        INSERT OR IGNORE INTO vehicles (server, name, plate, insurance_expiry, notes, added_by)
+        VALUES (?, ?, ?, NULL, ?, ?)
+        """, initial_fleet)
 
     # 5. Plantation (GrandRP Pineapple)
     cursor.execute("""
