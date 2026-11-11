@@ -2,7 +2,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands, tasks
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import Optional, Any, Tuple, List, Dict
 from utils import parse_amount, format_money, discord_timestamp, is_admin_user
 import database as db
 
