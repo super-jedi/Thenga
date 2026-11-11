@@ -15,10 +15,10 @@ class VehiclesCog(commands.Cog, name="Vehicle Fleet"):
     @vehicle_group.command(name="add", description="Add a vehicle to the family garage (defaults to EXPIRED insurance).")
     @app_commands.describe(
         name="Vehicle model (e.g. Bugatti Chiron, Jugular, Toros)",
-        plate="License plate number",
+        plate="License plate (leave empty if vehicle has no plate)",
         server="Which RP server this vehicle belongs to",
         insurance_days="Days of insurance remaining (0 = Expired)",
-        notes="Notes (e.g. Parked at Family House, Level 4 Engine, Assigned to Superjedi)"
+        notes="Notes (e.g. Parked at Family House, Level 4 Engine)"
     )
     @app_commands.choices(server=[
         app_commands.Choice(name="Grand RP", value="grandrp"),
@@ -28,7 +28,7 @@ class VehiclesCog(commands.Cog, name="Vehicle Fleet"):
         self,
         interaction: discord.Interaction,
         name: str,
-        plate: str,
+        plate: Optional[str] = None,
         server: Optional[app_commands.Choice[str]] = None,
         insurance_days: int = 0,
         notes: str = ""
@@ -40,23 +40,25 @@ class VehiclesCog(commands.Cog, name="Vehicle Fleet"):
         if insurance_days > 0:
             expiry_dt = datetime.now(timezone.utc) + timedelta(days=insurance_days)
 
+        clean_plate = plate.strip().upper() if plate else None
         db.add_vehicle(
             server=target_server,
             name=name.strip(),
-            plate=plate.strip().upper(),
+            plate=clean_plate,
             expiry_dt=expiry_dt,
             notes=notes.strip(),
             added_by=interaction.user.display_name
         )
 
         status_text = "🔴 **EXPIRED**" if not expiry_dt else f"🟢 Insured until {discord_timestamp(expiry_dt, 'F')}"
+        plate_display = f"`{clean_plate}`" if clean_plate else "*None (No Plate)*"
 
         embed = discord.Embed(
             title="🚗 Family Vehicle Added",
             color=discord.Color.red() if not expiry_dt else discord.Color.green(),
             description=f"**{name}** has been registered into the {target_server.upper()} fleet."
         )
-        embed.add_field(name="🔢 License Plate", value=f"`{plate.upper()}`", inline=True)
+        embed.add_field(name="🔢 License Plate", value=plate_display, inline=True)
         embed.add_field(name="🛡️ Insurance", value=status_text, inline=True)
         if notes:
             embed.add_field(name="📝 Notes", value=notes, inline=False)
@@ -135,19 +137,21 @@ class VehiclesCog(commands.Cog, name="Vehicle Fleet"):
         insured_list = []
 
         for v in vehicles:
+            v_id = v["id"]
             name = v["name"]
-            plate = v["plate"]
+            plate = v.get("plate")
+            plate_str = f"(`{plate}`)" if plate else "*(No Plate)*"
             srv = v["server"].upper()
-            notes_str = f" *({v['notes']})*" if v.get("notes") else ""
+            notes_str = f" • *{v['notes']}*" if v.get("notes") else ""
 
             if not v.get("insurance_expiry"):
-                expired_list.append(f"🔴 `[{srv}]` **{name}** (`{plate}`){notes_str} — **EXPIRED**")
+                expired_list.append(f"🔴 `#{v_id}` **{name}** {plate_str}{notes_str} — **EXPIRED**")
             else:
                 exp_dt = datetime.fromisoformat(v["insurance_expiry"])
                 if now > exp_dt:
-                    expired_list.append(f"🔴 `[{srv}]` **{name}** (`{plate}`){notes_str} — Expired {discord_timestamp(exp_dt, 'R')}")
+                    expired_list.append(f"🔴 `#{v_id}` **{name}** {plate_str}{notes_str} — Expired {discord_timestamp(exp_dt, 'R')}")
                 else:
-                    insured_list.append(f"🟢 `[{srv}]` **{name}** (`{plate}`){notes_str} — Valid until {discord_timestamp(exp_dt, 'R')}")
+                    insured_list.append(f"🟢 `#{v_id}` **{name}** {plate_str}{notes_str} — Valid until {discord_timestamp(exp_dt, 'R')}")
 
         embed = discord.Embed(
             title="🏎️ Thenga Family Fleet Inventory",
@@ -158,52 +162,52 @@ class VehiclesCog(commands.Cog, name="Vehicle Fleet"):
         if expired_list:
             embed.add_field(
                 name=f"⚠️ EXPIRED INSURANCE ({len(expired_list)})",
-                value="\n".join(expired_list[:20]) + ("\n*...and more*" if len(expired_list) > 20 else ""),
+                value="\n".join(expired_list[:25]) + ("\n*...and more*" if len(expired_list) > 25 else ""),
                 inline=False
             )
 
         if insured_list and not only_expired:
             embed.add_field(
                 name=f"🛡️ ACTIVE INSURANCE ({len(insured_list)})",
-                value="\n".join(insured_list[:20]) + ("\n*...and more*" if len(insured_list) > 20 else ""),
+                value="\n".join(insured_list[:25]) + ("\n*...and more*" if len(insured_list) > 25 else ""),
                 inline=False
             )
 
-        embed.set_footer(text=f"Total: {len(vehicles)} vehicles • Use /vehicle renew [plate] to update insurance")
+        embed.set_footer(text=f"Total: {len(vehicles)} vehicles • Use /vehicle renew [id or plate] to update insurance")
         await interaction.followup.send(embed=embed)
 
     @vehicle_group.command(name="renew", description="Renew or update insurance for a vehicle.")
     @app_commands.describe(
-        plate="License plate of the car",
+        identifier="License plate OR ID # of the vehicle (e.g. 5JCS268 or 4)",
         days="How many days of insurance were purchased (default: 30)"
     )
-    async def renew_insurance(self, interaction: discord.Interaction, plate: str, days: int = 30):
+    async def renew_insurance(self, interaction: discord.Interaction, identifier: str, days: int = 30):
         await interaction.response.defer()
         new_expiry = datetime.now(timezone.utc) + timedelta(days=days)
-        success = db.renew_vehicle_insurance(plate, new_expiry)
+        success = db.renew_vehicle_insurance(identifier, new_expiry)
 
         if not success:
-            await interaction.followup.send(f"❌ Vehicle with plate `{plate.upper()}` was not found in the fleet.")
+            await interaction.followup.send(f"❌ Vehicle `{identifier.upper()}` was not found in the fleet.")
             return
 
         embed = discord.Embed(
             title="🛡️ Vehicle Insurance Renewed!",
             color=discord.Color.green(),
-            description=f"Insurance for plate **`{plate.upper()}`** has been renewed for **{days} days**."
+            description=f"Insurance for **`{identifier.upper()}`** has been renewed for **{days} days**."
         )
         embed.add_field(name="Valid Until", value=f"{discord_timestamp(new_expiry, 'F')}\n({discord_timestamp(new_expiry, 'R')})")
         embed.set_footer(text="Thenga Fleet Manager")
         await interaction.followup.send(embed=embed)
 
     @vehicle_group.command(name="remove", description="Remove a vehicle from the fleet.")
-    @app_commands.describe(plate="License plate to delete")
-    async def remove_vehicle(self, interaction: discord.Interaction, plate: str):
+    @app_commands.describe(identifier="License plate OR ID # to delete")
+    async def remove_vehicle(self, interaction: discord.Interaction, identifier: str):
         await interaction.response.defer()
-        success = db.remove_vehicle(plate)
+        success = db.remove_vehicle(identifier)
         if success:
-            await interaction.followup.send(f"🗑️ Removed vehicle with plate **`{plate.upper()}`** from the fleet.")
+            await interaction.followup.send(f"🗑️ Removed vehicle **`{identifier.upper()}`** from the fleet.")
         else:
-            await interaction.followup.send(f"❌ Plate `{plate.upper()}` not found.")
+            await interaction.followup.send(f"❌ Vehicle `{identifier.upper()}` not found.")
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(VehiclesCog(bot))

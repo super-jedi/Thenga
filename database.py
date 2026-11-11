@@ -67,14 +67,14 @@ def init_db():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         server TEXT NOT NULL,
         name TEXT NOT NULL,
-        plate TEXT UNIQUE NOT NULL,
+        plate TEXT,
         insurance_expiry TIMESTAMP,
         notes TEXT,
         added_by TEXT
     )
     """)
 
-    # Seed initial vehicles if table is empty
+    # Check vehicle count and seed if empty
     vehicle_count = cursor.execute("SELECT COUNT(*) FROM vehicles").fetchone()[0]
     if vehicle_count == 0:
         initial_fleet = [
@@ -82,28 +82,30 @@ def init_db():
             ('grandrp', 'Coil Aleron Cabrio', '5JCS268', 'GrandRP Garage', 'superjedi'),
             ('grandrp', 'Ubermacht Arclight R', '1MIP449', 'GrandRP Garage', 'superjedi'),
             ('grandrp', 'Granger', '1ALG256', 'GrandRP Garage', 'superjedi'),
-            ('grandrp', 'Buzzard (Helicopter)', 'BUZZARD', 'Family Aircraft', 'superjedi'),
+            ('grandrp', 'Buzzard (Helicopter)', None, 'Family Aircraft', 'superjedi'),
             ('grandrp', 'Truffade Éclat', 'OVER111', 'GrandRP Garage', 'superjedi'),
-            ('grandrp', 'Coil Zenith Blackline', 'ZENITH-01', 'Default / Unplated', 'superjedi'),
-            ('grandrp', 'Ubermacht Summit Signature', 'SUMMIT-01', 'Default / Unplated', 'superjedi'),
-            ('grandrp', 'Obey Sirocco V6', 'SIROCCO-01', 'Default / Unplated', 'superjedi'),
-            ('grandrp', 'Declasse Torven Cabrio', 'TORVEN-01', 'Default / Unplated', 'superjedi'),
-            ('grandrp', 'Declasse Vigero ZX', 'VIGERO-01', 'Default / Unplated', 'superjedi'),
-            ('grandrp', 'Obey Sirocco V6', 'SIROCCO-02', 'Default / Unplated', 'superjedi'),
-            ('grandrp', 'Declasse Aurelia Touring', 'AURELIA-01', 'Default / Unplated', 'superjedi'),
+            ('grandrp', 'Coil Zenith Blackline', None, 'GrandRP Garage', 'superjedi'),
+            ('grandrp', 'Ubermacht Summit Signature', None, 'GrandRP Garage', 'superjedi'),
+            ('grandrp', 'Obey Sirocco V6', None, 'GrandRP Garage', 'superjedi'),
+            ('grandrp', 'Declasse Torven Cabrio', None, 'GrandRP Garage', 'superjedi'),
+            ('grandrp', 'Declasse Vigero ZX', None, 'GrandRP Garage', 'superjedi'),
+            ('grandrp', 'Obey Sirocco V6', None, 'GrandRP Garage', 'superjedi'),
+            ('grandrp', 'Declasse Aurelia Touring', None, 'GrandRP Garage', 'superjedi'),
+
             # Screenshot 2
             ('grandrp', 'Ubermacht Apex R-Spec', '6VYI947', 'GrandRP Garage', 'superjedi'),
-            ('grandrp', 'Obey Sirocco V6', 'SIROCCO-03', 'Default / Unplated', 'superjedi'),
-            ('grandrp', 'Bodhi', 'BODHI-01', 'Family Truck - Unplated', 'superjedi'),
-            ('grandrp', 'Bodhi', 'BODHI-02', 'Family Truck - Unplated', 'superjedi'),
-            ('grandrp', 'Bodhi', 'BODHI-03', 'Family Truck - Unplated', 'superjedi'),
+            ('grandrp', 'Obey Sirocco V6', None, 'GrandRP Garage', 'superjedi'),
+            ('grandrp', 'Bodhi', None, 'Family Truck', 'superjedi'),
+            ('grandrp', 'Bodhi', None, 'Family Truck', 'superjedi'),
+            ('grandrp', 'Bodhi', None, 'Family Truck', 'superjedi'),
             ('grandrp', 'Coil Vespera 4x4', '0JED125', 'Custom Jedi Plate', 'superjedi'),
             ('grandrp', 'Ubermacht Valora GTS', '0JED124', 'Custom Jedi Plate', 'superjedi'),
-            ('grandrp', 'Annis Novus Blackline', 'NOVUS-01', 'Default / Unplated', 'superjedi'),
+            ('grandrp', 'Annis Novus Blackline', None, 'GrandRP Garage', 'superjedi'),
             ('grandrp', 'Declasse Atlas', '0JED123', 'Custom Jedi Plate', 'superjedi'),
             ('grandrp', 'Ubermacht Revenant Touring', '0JED107', 'Custom Jedi Plate', 'superjedi'),
             ('grandrp', 'Progen Helix Roadster', '0JED100', 'Custom Jedi Plate', 'superjedi'),
             ('grandrp', 'Bodhi', '4FYR239', 'Family Truck', 'superjedi'),
+
             # Screenshot 3
             ('grandrp', 'Bodhi', '9QEW655', 'Family Truck', 'superjedi'),
             ('grandrp', 'Bodhi', '2UJU654', 'Family Truck', 'superjedi'),
@@ -114,7 +116,7 @@ def init_db():
             ('grandrp', 'Rusty Rebel', '4CAG723', 'Family Truck', 'superjedi')
         ]
         cursor.executemany("""
-        INSERT OR IGNORE INTO vehicles (server, name, plate, insurance_expiry, notes, added_by)
+        INSERT INTO vehicles (server, name, plate, insurance_expiry, notes, added_by)
         VALUES (?, ?, ?, NULL, ?, ?)
         """, initial_fleet)
 
@@ -245,40 +247,52 @@ def repay_loan(loan_id: int, repay_amount: float) -> Optional[Dict[str, Any]]:
 
 # ==================== VEHICLE FUNCTIONS ====================
 
-def add_vehicle(server: str, name: str, plate: str, expiry_dt: Optional[datetime], notes: str, added_by: str):
+def add_vehicle(server: str, name: str, plate: Optional[str], expiry_dt: Optional[datetime], notes: str, added_by: str):
     conn = get_connection()
     expiry_str = expiry_dt.isoformat() if expiry_dt else None
+    clean_plate = plate.strip().upper() if plate else None
     conn.execute("""
-    INSERT OR REPLACE INTO vehicles (server, name, plate, insurance_expiry, notes, added_by)
+    INSERT INTO vehicles (server, name, plate, insurance_expiry, notes, added_by)
     VALUES (?, ?, ?, ?, ?, ?)
-    """, (server.lower(), name, plate.upper(), expiry_str, notes, added_by))
+    """, (server.lower(), name, clean_plate, expiry_str, notes, added_by))
     conn.commit()
     conn.close()
 
 def get_vehicles(server: Optional[str] = None) -> List[Dict[str, Any]]:
     conn = get_connection()
     if server:
-        rows = conn.execute("SELECT * FROM vehicles WHERE server = ? ORDER BY name ASC", (server.lower(),)).fetchall()
+        rows = conn.execute("SELECT * FROM vehicles WHERE server = ? ORDER BY id ASC", (server.lower(),)).fetchall()
     else:
-        rows = conn.execute("SELECT * FROM vehicles ORDER BY server ASC, name ASC").fetchall()
+        rows = conn.execute("SELECT * FROM vehicles ORDER BY server ASC, id ASC").fetchall()
     conn.close()
     return [dict(r) for r in rows]
 
-def renew_vehicle_insurance(plate: str, new_expiry_dt: datetime) -> bool:
+def renew_vehicle_insurance(identifier: str, new_expiry_dt: datetime) -> bool:
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("""
-    UPDATE vehicles SET insurance_expiry = ? WHERE plate = ?
-    """, (new_expiry_dt.isoformat(), plate.upper()))
+    clean_id = identifier.strip().upper()
+
+    # Check if identifier is numeric ID
+    if clean_id.isdigit():
+        cursor.execute("UPDATE vehicles SET insurance_expiry = ? WHERE id = ?", (new_expiry_dt.isoformat(), int(clean_id)))
+    else:
+        cursor.execute("UPDATE vehicles SET insurance_expiry = ? WHERE plate = ?", (new_expiry_dt.isoformat(), clean_id))
+
     affected = cursor.rowcount > 0
     conn.commit()
     conn.close()
     return affected
 
-def remove_vehicle(plate: str) -> bool:
+def remove_vehicle(identifier: str) -> bool:
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM vehicles WHERE plate = ?", (plate.upper(),))
+    clean_id = identifier.strip().upper()
+
+    if clean_id.isdigit():
+        cursor.execute("DELETE FROM vehicles WHERE id = ?", (int(clean_id),))
+    else:
+        cursor.execute("DELETE FROM vehicles WHERE plate = ?", (clean_id,))
+
     affected = cursor.rowcount > 0
     conn.commit()
     conn.close()
