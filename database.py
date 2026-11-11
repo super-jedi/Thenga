@@ -127,6 +127,19 @@ def init_db():
         VALUES (?, ?, ?, NULL, ?, ?)
         """, initial_fleet)
 
+    # Auto-migration for vehicles table (image_url)
+    cursor.execute("PRAGMA table_info(vehicles)")
+    veh_cols = [c[1] for c in cursor.fetchall()]
+    if "image_url" not in veh_cols:
+        cursor.execute("ALTER TABLE vehicles ADD COLUMN image_url TEXT")
+
+    # Update Grand RP vehicle image URLs for IDs 1..31
+    for vid in range(1, 32):
+        cursor.execute(
+            "UPDATE vehicles SET image_url = ? WHERE id = ? AND server = 'grandrp' AND (image_url IS NULL OR image_url = '')",
+            (f"/static/vehicles/grand_veh_{vid}.png", vid)
+        )
+
     # 4. Plantation (GrandRP Pineapple)
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS plantation (
@@ -194,6 +207,9 @@ def init_db():
         cursor.execute("ALTER TABLE user_profiles ADD COLUMN libra_member_id INTEGER")
     if "grand_member_name" not in cols:
         cursor.execute("ALTER TABLE user_profiles ADD COLUMN grand_member_name TEXT")
+    if "profile_completed" not in cols:
+        cursor.execute("ALTER TABLE user_profiles ADD COLUMN profile_completed INTEGER DEFAULT 0")
+        cursor.execute("UPDATE user_profiles SET profile_completed = 1 WHERE libra_member_id IS NOT NULL OR grand_member_name IS NOT NULL OR username LIKE '%superjedi%'")
     
     dossier_cols = [
         ("grand_member_id", "TEXT DEFAULT '7104'"),
@@ -376,14 +392,14 @@ def get_recent_transactions(server: str, limit: int = 50) -> List[Dict[str, Any]
 
 # ==================== VEHICLE FUNCTIONS ====================
 
-def add_vehicle(server: str, name: str, plate: Optional[str], expiry_dt: Optional[datetime], notes: str, added_by: str):
+def add_vehicle(server: str, name: str, plate: Optional[str], expiry_dt: Optional[datetime], notes: str, added_by: str, image_url: Optional[str] = None):
     conn = get_connection()
     expiry_str = expiry_dt.isoformat() if expiry_dt else None
     clean_plate = plate.strip().upper() if plate else None
     conn.execute("""
-    INSERT INTO vehicles (server, name, plate, insurance_expiry, notes, added_by)
-    VALUES (?, ?, ?, ?, ?, ?)
-    """, (server.lower(), name, clean_plate, expiry_str, notes, added_by))
+    INSERT INTO vehicles (server, name, plate, insurance_expiry, notes, added_by, image_url)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (server.lower(), name, clean_plate, expiry_str, notes, added_by, image_url))
     conn.commit()
     conn.close()
 
@@ -526,10 +542,11 @@ def get_user_profile(user_id: str, username: str = "Member") -> Dict[str, Any]:
         default_grand = "Leader / High Command (Rank 10)" if is_founder else "Family Member (Rank 1)"
         default_libra = "Lv 2 Co-Leader" if is_founder else "Fedrix Associate (Rank 1)"
         libra_id = 5392 if is_founder else None
+        completed = 1 if is_founder else 0
         conn.execute("""
-        INSERT OR IGNORE INTO user_profiles (user_id, username, grand_rank, libra_rank, libra_member_id, grand_member_name)
-        VALUES (?, ?, ?, ?, ?, ?)
-        """, (str(user_id), username, default_grand, default_libra, libra_id, "Superjedi Tnga" if is_founder else username))
+        INSERT OR IGNORE INTO user_profiles (user_id, username, grand_rank, libra_rank, libra_member_id, grand_member_name, profile_completed)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (str(user_id), username, default_grand, default_libra, libra_id, "Superjedi Tnga" if is_founder else username, completed))
         conn.commit()
         row = conn.execute("SELECT * FROM user_profiles WHERE user_id = ?", (str(user_id),)).fetchone()
 
@@ -632,17 +649,29 @@ def link_user_profiles(user_id: str, username: str, libra_member_id: Optional[in
             libra_rank_str = f"Lv {m['rank_level']} {m['rank_name']}"
 
     conn.execute("""
-    INSERT INTO user_profiles (user_id, username, grand_rank, libra_rank, libra_member_id, grand_member_name, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    INSERT INTO user_profiles (user_id, username, grand_rank, libra_rank, libra_member_id, grand_member_name, profile_completed, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP)
     ON CONFLICT(user_id) DO UPDATE SET
         username = excluded.username,
         grand_rank = excluded.grand_rank,
         libra_rank = excluded.libra_rank,
         libra_member_id = excluded.libra_member_id,
         grand_member_name = excluded.grand_member_name,
+        profile_completed = 1,
         updated_at = CURRENT_TIMESTAMP
     """, (str(user_id), username, grand_rank, libra_rank_str, libra_member_id, grand_name))
 
+    conn.commit()
+    conn.close()
+    return True
+
+def dismiss_user_profile_prompt(user_id: str) -> bool:
+    conn = get_connection()
+    conn.execute("""
+    INSERT INTO user_profiles (user_id, username, profile_completed, updated_at)
+    VALUES (?, 'Operative', 1, CURRENT_TIMESTAMP)
+    ON CONFLICT(user_id) DO UPDATE SET profile_completed = 1, updated_at = CURRENT_TIMESTAMP
+    """, (str(user_id),))
     conn.commit()
     conn.close()
     return True

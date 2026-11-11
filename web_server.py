@@ -276,13 +276,173 @@ input, select {
     transition: border-color 0.2s, box-shadow 0.2s;
 }
 input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 12px var(--accent-glow); }
-table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--card-border); font-size: 14px; }
+table { width: 100%; border-collapse: collapse; }
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-top: 10px;
+    border-radius: 8px;
+}
+th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--card-border); font-size: 14px; white-space: nowrap; }
 th { color: var(--text-secondary); font-size: 12px; text-transform: uppercase; letter-spacing: 0.8px; }
 .badge { display: inline-block; padding: 4px 10px; border-radius: 9999px; font-size: 12px; font-weight: 800; letter-spacing: 0.5px; }
 .badge-red { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid #ef4444; }
 .badge-green { background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid #22c55e; }
 .badge-purple { background: rgba(168, 85, 247, 0.2); color: #c084fc; border: 1px solid #a855f7; }
+
+/* GTA V LICENSE PLATES */
+.gtav-plate {
+    display: inline-block;
+    background: #0f121b;
+    border: 1.5px solid #f59e0b;
+    color: #f59e0b;
+    font-family: 'Courier New', Courier, monospace;
+    font-weight: 900;
+    font-size: 13px;
+    letter-spacing: 2px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    box-shadow: inset 0 0 6px rgba(245, 158, 11, 0.25);
+    text-transform: uppercase;
+}
+.gtav-plate-sm {
+    display: inline-block;
+    background: #0f121b;
+    border: 1px solid #f59e0b;
+    color: #f59e0b;
+    font-family: 'Courier New', Courier, monospace;
+    font-weight: 800;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    text-transform: uppercase;
+}
+
+/* GRAND RP SHOWROOM FLEET GRID */
+.grand-veh-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+    margin-top: 16px;
+}
+.grand-veh-card {
+    background: #0d0f17;
+    border: 1px solid #1a1e2b;
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+    position: relative;
+}
+.grand-veh-card:hover {
+    transform: translateY(-4px);
+    border-color: #3b82f6;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+}
+.grand-veh-thumb-wrap {
+    position: relative;
+    height: 135px;
+    background: radial-gradient(circle at center, #1e293b 0%, #07090e 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    overflow: hidden;
+    border-bottom: 1px solid #1a1e2b;
+}
+.grand-veh-img {
+    max-height: 110px;
+    max-width: 90%;
+    object-fit: contain;
+    filter: drop-shadow(0 6px 14px rgba(0,0,0,0.85));
+    transition: transform 0.25s ease;
+}
+.grand-veh-card:hover .grand-veh-img {
+    transform: scale(1.06);
+}
+.grand-veh-id-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: rgba(0,0,0,0.75);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: #94a3b8;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 6px;
+    backdrop-filter: blur(4px);
+}
+.grand-veh-status-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+}
+.grand-veh-info {
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    justify-content: space-between;
+}
+.grand-veh-name {
+    font-size: 15px;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 6px;
+}
+.grand-veh-plate-wrap {
+    margin-bottom: 8px;
+}
+.grand-veh-notes {
+    font-size: 12px;
+    color: #64748b;
+    margin-bottom: 14px;
+    min-height: 18px;
+}
+.grand-veh-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: auto;
+}
+.btn-sm {
+    padding: 6px 10px !important;
+    font-size: 11px !important;
+    flex: 1;
+}
+
+/* RESPONSIVE MEDIA QUERIES FOR MOBILE */
+@media (max-width: 768px) {
+    header {
+        padding: 10px 16px;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    .brand { font-size: 16px; }
+    .brand-badge { display: none; }
+    .user-pill { padding: 4px 10px; font-size: 13px; }
+    .user-avatar { width: 26px; height: 26px; }
+    .tabs {
+        overflow-x: auto;
+        white-space: nowrap;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 8px;
+        gap: 8px;
+    }
+    .tab-btn { padding: 6px 12px; font-size: 13px; }
+    .grid-2, .grid-3 { grid-template-columns: 1fr !important; }
+    .card { padding: 16px; border-radius: 12px; }
+    .stat-val { font-size: 20px; }
+    .grand-veh-grid { grid-template-columns: 1fr !important; }
+}
+@media (max-width: 480px) {
+    header { padding: 8px 12px; }
+    .brand span { font-size: 14px; }
+    main { padding: 0 10px !important; }
+}
 """
 
 def render_header(user: dict, subtitle: str = "") -> str:
@@ -316,6 +476,7 @@ async def handle_home(request: web.Request):
         <!DOCTYPE html>
         <html>
             <head>
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title>Thenga Network Management Dashboard</title>
                 <style>{COMMON_CSS}</style>
             </head>
@@ -350,7 +511,11 @@ async def handle_home(request: web.Request):
     members = db.get_libra_members()
     profile = db.get_user_profile(user["id"], user["username"])
     is_adm = is_admin_user(user)
-    is_first_time = (profile.get("libra_member_id") is None)
+    is_first_time = (
+        profile.get("profile_completed") != 1 and
+        profile.get("libra_member_id") is None and
+        not profile.get("grand_member_name")
+    )
 
     # First time member dropdown options
     member_select_options = '<option value="">-- Choose your in-game character --</option>'
@@ -375,12 +540,17 @@ async def handle_home(request: web.Request):
     <!DOCTYPE html>
     <html>
         <head>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Operations Hub • Thenga Network</title>
             <style>
                 {COMMON_CSS}
                 @media (max-width: 950px) {{
                     .hub-layout {{ grid-template-columns: 1fr !important; }}
                     .hub-grid {{ grid-template-columns: 1fr !important; }}
+                }}
+                @media (max-width: 600px) {{
+                    main {{ padding: 0 12px !important; margin: 16px auto !important; }}
+                    .hub-layout {{ gap: 20px !important; }}
                 }}
             </style>
         </head>
@@ -604,12 +774,24 @@ async def handle_home(request: web.Request):
 
                     <div style="display: flex; gap: 10px;">
                         <button id="btn-save-personas" class="btn btn-primary" style="flex: 1; padding: 12px;" onclick="submitLinkProfiles(this)">Save & Link Personas</button>
-                        <button class="btn btn-secondary" onclick="closeModal('profileModal')">Later</button>
+                        <button class="btn btn-secondary" onclick="dismissProfileModal()">Later</button>
                     </div>
                 </div>
             </div>
 
             <script>
+                // Instant suppression if modal was already dismissed or saved
+                if (localStorage.getItem('thenga_profile_dismissed') === 'true') {{
+                    var pm = document.getElementById('profileModal');
+                    if (pm) pm.style.display = 'none';
+                }}
+
+                function dismissProfileModal() {{
+                    localStorage.setItem('thenga_profile_dismissed', 'true');
+                    closeModal('profileModal');
+                    fetch('/api/user/dismiss_profile_prompt', {{ method: 'POST' }}).catch(() => {{}});
+                }}
+
                 function toggleEditRanks() {{
                     var box = document.getElementById('rank-edit-box');
                     box.style.display = box.style.display === 'none' ? 'block' : 'none';
@@ -647,6 +829,7 @@ async def handle_home(request: web.Request):
                         }});
                         let d = await res.json();
                         if (d.success) {{
+                            localStorage.setItem('thenga_profile_dismissed', 'true');
                             if (targetBtn) targetBtn.innerText = "✓ Linked!";
                             alert("In-game personas successfully linked!");
                             location.reload();
@@ -706,11 +889,15 @@ async def handle_grand(request: web.Request):
     vehicles = db.get_vehicles("grandrp")
     plantation = db.get_plantation_state()
 
-    # Build vehicles table rows
+    # Build vehicles cards & table rows
     now = datetime.now(timezone.utc)
     veh_rows = ""
+    veh_grid_cards = ""
     for v in vehicles:
-        plate = v.get("plate") or "*(No Plate)*"
+        v_id = v["id"]
+        v_img = v.get("image_url") or (f"/static/vehicles/grand_veh_{v_id}.png" if v_id <= 31 else "/logo.png")
+        plate = v.get("plate") or "NO PLATE"
+        has_plate = bool(v.get("plate"))
         exp = v.get("insurance_expiry")
         is_exp = True
         exp_txt = "EXPIRED"
@@ -721,16 +908,47 @@ async def handle_grand(request: web.Request):
                 exp_txt = exp_dt.strftime("%Y-%m-%d")
 
         badge = '<span class="badge badge-red">EXPIRED</span>' if is_exp else f'<span class="badge badge-green">{exp_txt}</span>'
+        plate_badge = f'<span class="gtav-plate">{plate}</span>' if has_plate else '<span style="color:#64748b; font-size:12px; font-style:italic;">No Plate</span>'
+        plate_badge_sm = f'<span class="gtav-plate-sm">{plate}</span>' if has_plate else '<span style="color:#64748b; font-size:11px; font-style:italic;">No Plate</span>'
+
+        # Showroom Grid Card
+        veh_grid_cards += f"""
+        <div class="grand-veh-card">
+            <div class="grand-veh-thumb-wrap">
+                <span class="grand-veh-id-badge">#{v_id}</span>
+                <span class="grand-veh-status-badge">{badge}</span>
+                <img src="{v_img}" alt="{v['name']}" class="grand-veh-img" onerror="this.src='/logo.png'">
+            </div>
+            <div class="grand-veh-info">
+                <div>
+                    <div class="grand-veh-name">{v['name']}</div>
+                    <div class="grand-veh-plate-wrap">{plate_badge}</div>
+                    <div class="grand-veh-notes">{v.get('notes') or 'Family Fleet Vehicle'}</div>
+                </div>
+                <div class="grand-veh-actions">
+                    <button class="btn btn-primary btn-sm" onclick="renewVehicle('{v_id}')">🛡️ +30d Insurance</button>
+                    <button class="btn btn-red btn-sm" style="flex:0 0 38px;" onclick="removeVehicle('{v_id}')" title="Remove Vehicle">🗑️</button>
+                </div>
+            </div>
+        </div>
+        """
+
+        # Table Row with thumbnail
         veh_rows += f"""
         <tr>
-            <td><b>#{v['id']}</b></td>
-            <td><b>{v['name']}</b></td>
-            <td><code>{plate}</code></td>
+            <td><b>#{v_id}</b></td>
+            <td>
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <img src="{v_img}" style="width:58px; height:34px; object-fit:contain; background:#080a0f; border-radius:6px; border:1px solid #1e2436; padding:2px;" onerror="this.src='/logo.png'">
+                    <b>{v['name']}</b>
+                </div>
+            </td>
+            <td>{plate_badge_sm}</td>
             <td>{v.get('notes') or '-'}</td>
             <td>{badge}</td>
             <td>
-                <button class="btn btn-primary" style="padding: 4px 10px; font-size: 12px;" onclick="renewVehicle('{v['id']}')">🛡️ +30d</button>
-                <button class="btn btn-red" style="padding: 4px 10px; font-size: 12px;" onclick="removeVehicle('{v['id']}')">🗑️</button>
+                <button class="btn btn-primary" style="padding: 4px 10px; font-size: 12px;" onclick="renewVehicle('{v_id}')">🛡️ +30d</button>
+                <button class="btn btn-red" style="padding: 4px 10px; font-size: 12px;" onclick="removeVehicle('{v_id}')">🗑️</button>
             </td>
         </tr>
         """
@@ -756,7 +974,16 @@ async def handle_grand(request: web.Request):
     html = f"""
     <!DOCTYPE html>
     <html>
-        <head><title>Grand RP (EN2) • Thenga Network</title><style>{COMMON_CSS}</style></head>
+        <head>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Grand RP (EN2) • Thenga Network</title>
+            <style>
+                {COMMON_CSS}
+                @media (max-width: 600px) {{
+                    main {{ padding: 0 12px !important; margin: 16px auto !important; }}
+                }}
+            </style>
+        </head>
         <body>
             {render_header(user, "Grand RP (EN2)")}
 
@@ -769,9 +996,9 @@ async def handle_grand(request: web.Request):
                 </div>
 
                 <div class="tabs">
-                    <button class="tab-btn active" onclick="showTab('bank')">🏦 Family Treasury</button>
-                    <button class="tab-btn" onclick="showTab('garage')">🏎️ Garage Fleet ({len(vehicles)})</button>
-                    <button class="tab-btn" onclick="showTab('plantation')">🍍 Pineapple Plantation</button>
+                    <button id="tab-btn-bank" class="tab-btn active" onclick="showTab('bank')">🏦 Family Treasury</button>
+                    <button id="tab-btn-garage" class="tab-btn" onclick="showTab('garage')">🏎️ Garage Fleet ({len(vehicles)})</button>
+                    <button id="tab-btn-plantation" class="tab-btn" onclick="showTab('plantation')">🍍 Pineapple Plantation</button>
                 </div>
 
                 <!-- TAB 1: BANK -->
@@ -820,38 +1047,68 @@ async def handle_grand(request: web.Request):
                     </div>
 
                     <div class="card">
-                        <h3>📜 Recent Grand RP Transactions</h3>
-                        <table>
-                            <thead>
-                                <tr><th>Type</th><th>Gross</th><th>Tax</th><th>Net</th><th>Member</th><th>Reason</th><th>Date</th></tr>
-                            </thead>
-                            <tbody>{tx_rows}</tbody>
-                        </table>
+                        <h3 style="margin-bottom: 12px;">📜 Recent Grand RP Transactions</h3>
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr><th>Type</th><th>Gross</th><th>Tax</th><th>Net</th><th>Member</th><th>Reason</th><th>Date</th></tr>
+                                </thead>
+                                <tbody>{tx_rows}</tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
                 <!-- TAB 2: GARAGE -->
                 <div id="tab-garage" style="display:none;">
                     <div class="card" style="margin-bottom: 20px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <h3>🚗 Add Vehicle to Grand RP</h3>
-                            <div style="display:flex; gap:10px;">
-                                <input id="veh-name" type="text" placeholder="Vehicle Name (e.g. Chiron)" style="margin:0; width:180px;">
-                                <input id="veh-plate" type="text" placeholder="Plate (optional)" style="margin:0; width:140px;">
-                                <input id="veh-days" type="number" placeholder="Days (0=Exp)" style="margin:0; width:110px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                            <div>
+                                <h3 style="margin:0;">🚗 Add Vehicle to Grand RP</h3>
+                                <div style="color:var(--text-secondary); font-size:12px; margin-top:2px;">Register a new vehicle with insurance duration</div>
+                            </div>
+                            <div style="display:flex; flex-wrap:wrap; gap:10px; flex:1; max-width:600px; justify-content:flex-end;">
+                                <input id="veh-name" type="text" placeholder="Vehicle Name (e.g. Chiron)" style="margin:0; flex:2; min-width:140px;">
+                                <input id="veh-plate" type="text" placeholder="Plate (optional)" style="margin:0; flex:1; min-width:100px;">
+                                <input id="veh-days" type="number" placeholder="Days (0=Exp)" style="margin:0; flex:1; min-width:90px;">
                                 <button class="btn btn-primary" onclick="addVehicle('grandrp')">+ Add Car</button>
                             </div>
                         </div>
                     </div>
 
                     <div class="card">
-                        <h3>Grand RP Fleet ({len(vehicles)} Vehicles)</h3>
-                        <table>
-                            <thead>
-                                <tr><th>ID</th><th>Vehicle Name</th><th>Plate</th><th>Notes</th><th>Insurance Status</th><th>Actions</th></tr>
-                            </thead>
-                            <tbody>{veh_rows}</tbody>
-                        </table>
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+                            <div>
+                                <h3 style="margin:0;">Grand RP Fleet ({len(vehicles)} Vehicles)</h3>
+                                <div style="color:var(--text-secondary); font-size:13px; margin-top:2px;">Authentic GTA V GrandRP fleet renders & registered license plates</div>
+                            </div>
+                            <div style="display:flex; gap:8px;">
+                                <button id="btn-view-grid" class="tab-btn active" style="padding:6px 14px; font-size:12px; border:1px solid rgba(59,130,246,0.4);" onclick="setGarageView('grid')">🎴 Showroom Grid</button>
+                                <button id="btn-view-table" class="tab-btn" style="padding:6px 14px; font-size:12px; border:1px solid #2b3244;" onclick="setGarageView('table')">📋 Table View</button>
+                            </div>
+                        </div>
+
+                        <!-- SHOWROOM GRID VIEW -->
+                        <div id="garage-grid-view" class="grand-veh-grid">
+                            {veh_grid_cards}
+                        </div>
+
+                        <!-- TABLE VIEW -->
+                        <div id="garage-table-view" class="table-responsive" style="display:none;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Vehicle Name</th>
+                                        <th>Plate</th>
+                                        <th>Notes</th>
+                                        <th>Insurance Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>{veh_rows}</tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
@@ -865,7 +1122,7 @@ async def handle_grand(request: web.Request):
                         <p style="color:var(--text-secondary); margin-bottom:20px;">
                             Pineapple crop cycle management with live watering countdown and profit calculation.
                         </p>
-                        <div style="display:flex; gap:16px;">
+                        <div style="display:flex; flex-wrap:wrap; gap:12px;">
                             <button class="btn btn-green" onclick="plantCrop()">🌱 Plant Pineapple (2h nourish, 4h harvest)</button>
                             <button class="btn btn-primary" onclick="nourishCrop()">💧 Nourish Now (+2h)</button>
                             <button class="btn btn-purple" onclick="harvestCrop()">🚜 Collect Harvest & Bank</button>
@@ -875,12 +1132,39 @@ async def handle_grand(request: web.Request):
             </main>
 
             <script>
+                function setGarageView(view) {{
+                    var gView = document.getElementById('garage-grid-view');
+                    var tView = document.getElementById('garage-table-view');
+                    var btnGrid = document.getElementById('btn-view-grid');
+                    var btnTable = document.getElementById('btn-view-table');
+
+                    if (view === 'grid') {{
+                        if (gView) gView.style.display = 'grid';
+                        if (tView) tView.style.display = 'none';
+                        if (btnGrid) {{ btnGrid.classList.add('active'); btnGrid.style.borderColor = 'rgba(59,130,246,0.5)'; }}
+                        if (btnTable) {{ btnTable.classList.remove('active'); btnTable.style.borderColor = '#2b3244'; }}
+                        localStorage.setItem('grand_garage_view', 'grid');
+                    }} else {{
+                        if (gView) gView.style.display = 'none';
+                        if (tView) tView.style.display = 'block';
+                        if (btnGrid) {{ btnGrid.classList.remove('active'); btnGrid.style.borderColor = '#2b3244'; }}
+                        if (btnTable) {{ btnTable.classList.add('active'); btnTable.style.borderColor = 'rgba(59,130,246,0.5)'; }}
+                        localStorage.setItem('grand_garage_view', 'table');
+                    }}
+                }}
+
+                if (localStorage.getItem('grand_garage_view') === 'table') {{
+                    setGarageView('table');
+                }}
+
                 function showTab(tab) {{
                     document.getElementById('tab-bank').style.display = tab === 'bank' ? 'block' : 'none';
                     document.getElementById('tab-garage').style.display = tab === 'garage' ? 'block' : 'none';
                     document.getElementById('tab-plantation').style.display = tab === 'plantation' ? 'block' : 'none';
-                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-                    event.target.classList.add('active');
+                    
+                    document.getElementById('tab-btn-bank').classList.toggle('active', tab === 'bank');
+                    document.getElementById('tab-btn-garage').classList.toggle('active', tab === 'garage');
+                    document.getElementById('tab-btn-plantation').classList.toggle('active', tab === 'plantation');
                 }}
 
                 function parseVal(s) {{
@@ -1014,7 +1298,11 @@ async def handle_libra(request: web.Request):
     
     can_manage = db.user_can_manage_libra(user)
     is_founder = is_admin_user(user)
-    is_first_time = (profile.get("libra_member_id") is None)
+    is_first_time = (
+        profile.get("profile_completed") != 1 and
+        profile.get("libra_member_id") is None and
+        not profile.get("grand_member_name")
+    )
 
     # 1. Build Members Table Rows
     member_rows = ""
@@ -1192,7 +1480,9 @@ async def handle_libra(request: web.Request):
     libra_char_id = str(libra_m['id']) if libra_m else (str(profile.get('libra_member_id')) if profile.get('libra_member_id') else '5392')
     libra_char_rank = f"Lv {libra_m['rank_level']} {libra_m['rank_name']}" if libra_m else profile.get('libra_rank', 'Lv 2 Co-Leader')
     libra_act = profile.get('libra_recent_activity') or 'Active clan operative'
-    libra_awards_display = render_award_text(profile.get('libra_awards'))
+    libra_awards = profile.get('libra_awards') or ''
+    libra_awards_display = render_award_text(libra_awards)
+    libra_punishments = profile.get('libra_punishments') or 'Good Standing (0 Suspensions)'
     
     if libra_m:
         libra_w_cnt = libra_m.get('warnings') or 0
@@ -1211,14 +1501,16 @@ async def handle_libra(request: web.Request):
     grand_char_id = profile.get('grand_member_id') or '7104'
     grand_char_rank = profile.get('grand_rank') or 'Leader / Boss (Rank 10)'
     grand_act = profile.get('grand_recent_activity') or 'Pineapple Harvest Banked • Active Fleet Operative'
-    grand_awards_display = render_award_text(profile.get('grand_awards'))
+    grand_awards = profile.get('grand_awards') or ''
+    grand_awards_display = render_award_text(grand_awards)
     grand_punishments = profile.get('grand_punishments') or 'Clean Record (0 Active Warnings)'
 
     discord_name = user['username']
     discord_id = str(user['id'])
     discord_rank = profile.get('discord_rank') or ('👑 Server Founder & Command Staff' if is_admin_user(user) else 'Verified Malayali Club Operative')
     discord_act = profile.get('discord_recent_activity') or 'Authenticated via Discord OAuth2 • Command Center Active'
-    discord_awards_display = render_award_text(profile.get('discord_awards'))
+    discord_awards = profile.get('discord_awards') or ''
+    discord_awards_display = render_award_text(discord_awards)
     discord_punishments = profile.get('discord_punishments') or 'Clean Record (0 Mutes / Warnings)'
 
     # Edit buttons: Visible ONLY for Rank 1, 2, and 3 in Libra (or Founder)
@@ -1237,6 +1529,7 @@ async def handle_libra(request: web.Request):
     <!DOCTYPE html>
     <html>
         <head>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Libra RP (Fedrix Clan) • Thenga Network</title>
             <style>
                 {COMMON_CSS}
@@ -1492,11 +1785,11 @@ async def handle_libra(request: web.Request):
                     .ingame-sidebar, .ingame-dossier-panel {{ width: 100%; border-right: none; border-left: none; border-bottom: 1px solid #1a1e2b; }}
                     .ingame-content {{ padding: 20px; }}
                 }}
-
-                @media (max-width: 900px) {{
-                    .ingame-shell {{ flex-direction: column; }}
-                    .ingame-sidebar {{ width: 100%; border-right: none; border-bottom: 1px solid #1a1e2b; }}
-                    .ingame-content {{ padding: 20px; }}
+                @media (max-width: 768px) {{
+                    .ingame-content {{ padding: 14px 12px; }}
+                    .ingame-sidebar {{ padding: 16px 14px; }}
+                    .ingame-search {{ width: 100% !important; max-width: 100% !important; }}
+                    .quick-stat-card {{ padding: 12px 14px; }}
                 }}
             </style>
         </head>
@@ -1600,20 +1893,22 @@ async def handle_libra(request: web.Request):
                         </div>
 
                         <div class="card" style="padding: 0; overflow: hidden; background: #0a0c12; border: 1px solid #1a1e2b;">
-                            <table style="margin: 0;">
-                                <thead>
-                                    <tr style="background: #08090d; border-bottom: 1px solid #161924;">
-                                        <th style="padding: 14px 18px; color: #64748b; font-size: 11px;">NAME</th>
-                                        <th style="padding: 14px 18px; color: #64748b; font-size: 11px;">ID</th>
-                                        <th style="padding: 14px 18px; color: #64748b; font-size: 11px;">RANK</th>
-                                        <th style="padding: 14px 18px; color: #64748b; font-size: 11px;">WARNING STATUS</th>
-                                        <th style="padding: 14px 18px; color: #64748b; font-size: 11px; text-align: right;">ACTIONS</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="members-table-body">
-                                    {member_rows}
-                                </tbody>
-                            </table>
+                            <div class="table-responsive" style="margin: 0;">
+                                <table style="margin: 0;">
+                                    <thead>
+                                        <tr style="background: #08090d; border-bottom: 1px solid #161924;">
+                                            <th style="padding: 14px 18px; color: #64748b; font-size: 11px;">NAME</th>
+                                            <th style="padding: 14px 18px; color: #64748b; font-size: 11px;">ID</th>
+                                            <th style="padding: 14px 18px; color: #64748b; font-size: 11px;">RANK</th>
+                                            <th style="padding: 14px 18px; color: #64748b; font-size: 11px;">WARNING STATUS</th>
+                                            <th style="padding: 14px 18px; color: #64748b; font-size: 11px; text-align: right;">ACTIONS</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="members-table-body">
+                                        {member_rows}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
 
@@ -1627,20 +1922,22 @@ async def handle_libra(request: web.Request):
                         </div>
 
                         <div class="card" style="padding: 0; overflow: hidden; background: #0a0c12; border: 1px solid #1a1e2b;">
-                            <table style="margin: 0;">
-                                <thead>
-                                    <tr style="background: #08090d; border-bottom: 1px solid #161924;">
-                                        <th style="padding: 14px 18px;">TIER</th>
-                                        <th style="padding: 14px 18px;">RANK NAME</th>
-                                        <th style="padding: 14px 18px;">DUTIES & OPERATIONAL SCOPE</th>
-                                        <th style="padding: 14px 18px;">GOVERNANCE</th>
-                                        <th style="padding: 14px 18px; text-align: right;">OPERATIVES</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {rank_rows}
-                                </tbody>
-                            </table>
+                            <div class="table-responsive" style="margin: 0;">
+                                <table style="margin: 0;">
+                                    <thead>
+                                        <tr style="background: #08090d; border-bottom: 1px solid #161924;">
+                                            <th style="padding: 14px 18px;">TIER</th>
+                                            <th style="padding: 14px 18px;">RANK NAME</th>
+                                            <th style="padding: 14px 18px;">DUTIES & OPERATIONAL SCOPE</th>
+                                            <th style="padding: 14px 18px;">GOVERNANCE</th>
+                                            <th style="padding: 14px 18px; text-align: right;">OPERATIVES</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {rank_rows}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
 
@@ -1658,21 +1955,23 @@ async def handle_libra(request: web.Request):
                         </div>
 
                         <div class="card" style="padding: 0; overflow: hidden; background: #0a0c12; border: 1px solid #1a1e2b;">
-                            <table style="margin: 0;">
-                                <thead>
-                                    <tr style="background: #08090d; border-bottom: 1px solid #161924;">
-                                        <th style="padding: 14px 18px;">ID</th>
-                                        <th style="padding: 14px 18px;">VEHICLE MODEL</th>
-                                        <th style="padding: 14px 18px;">PLATE</th>
-                                        <th style="padding: 14px 18px;">RANK REQ</th>
-                                        <th style="padding: 14px 18px;">INSURANCE</th>
-                                        <th style="padding: 14px 18px; text-align: right;">ACTIONS</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="vehicles-table-body">
-                                    {veh_rows}
-                                </tbody>
-                            </table>
+                            <div class="table-responsive" style="margin: 0;">
+                                <table style="margin: 0;">
+                                    <thead>
+                                        <tr style="background: #08090d; border-bottom: 1px solid #161924;">
+                                            <th style="padding: 14px 18px;">ID</th>
+                                            <th style="padding: 14px 18px;">VEHICLE MODEL</th>
+                                            <th style="padding: 14px 18px;">PLATE</th>
+                                            <th style="padding: 14px 18px;">RANK REQ</th>
+                                            <th style="padding: 14px 18px;">INSURANCE</th>
+                                            <th style="padding: 14px 18px; text-align: right;">ACTIONS</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="vehicles-table-body">
+                                        {veh_rows}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
 
@@ -1731,14 +2030,16 @@ async def handle_libra(request: web.Request):
                             <div style="padding: 16px 20px; border-bottom: 1px solid #161924;">
                                 <h3 style="color:#fff; font-size:16px;">📜 Recent Clan Transactions</h3>
                             </div>
-                            <table style="margin:0;">
-                                <thead>
-                                    <tr style="background: #08090d;">
-                                        <th>TYPE</th><th>AMOUNT</th><th>MEMBER</th><th>REASON</th><th>DATE</th>
-                                    </tr>
-                                </thead>
-                                <tbody>{tx_rows}</tbody>
-                            </table>
+                            <div class="table-responsive" style="margin: 0;">
+                                <table style="margin:0;">
+                                    <thead>
+                                        <tr style="background: #08090d;">
+                                            <th>TYPE</th><th>AMOUNT</th><th>MEMBER</th><th>REASON</th><th>DATE</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>{tx_rows}</tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </main>
@@ -1991,7 +2292,7 @@ async def handle_libra(request: web.Request):
 
                     <div style="display: flex; gap: 10px;">
                         <button id="btn-save-personas-libra" class="btn btn-primary" style="flex: 1; padding: 12px;" onclick="submitLinkProfiles(this)">Save & Link Personas</button>
-                        <button class="btn btn-secondary" onclick="closeModal('profileModal')">Later</button>
+                        <button class="btn btn-secondary" onclick="dismissProfileModal()">Later</button>
                     </div>
                 </div>
             </div>
@@ -2161,6 +2462,18 @@ async def handle_libra(request: web.Request):
                     t.innerHTML = msg;
                     t.style.display = 'block';
                     setTimeout(() => {{ t.style.display = 'none'; }}, 4500);
+                }}
+
+                // Instant suppression if modal was already dismissed or saved
+                if (localStorage.getItem('thenga_profile_dismissed') === 'true') {{
+                    var pm = document.getElementById('profileModal');
+                    if (pm) pm.style.display = 'none';
+                }}
+
+                function dismissProfileModal() {{
+                    localStorage.setItem('thenga_profile_dismissed', 'true');
+                    closeModal('profileModal');
+                    fetch('/api/user/dismiss_profile_prompt', {{ method: 'POST' }}).catch(() => {{}});
                 }}
 
                 function closeModal(id) {{
@@ -2394,6 +2707,7 @@ async def handle_libra(request: web.Request):
                         }});
                         let d = await res.json();
                         if (d.success) {{
+                            localStorage.setItem('thenga_profile_dismissed', 'true');
                             if (targetBtn) targetBtn.innerText = "✓ Linked!";
                             showToast("In-game personas linked!");
                             setTimeout(() => location.reload(), 600);
@@ -2563,8 +2877,9 @@ async def api_vehicle_add(request: web.Request):
     days = data.get("insurance_days", 0)
     notes = data.get("notes", "")
 
+    image_url = data.get("image_url")
     exp = datetime.now(timezone.utc) + timedelta(days=days) if days > 0 else None
-    db.add_vehicle(server, name, plate, exp, notes, user["username"])
+    db.add_vehicle(server, name, plate, exp, notes, user["username"], image_url)
     return web.json_response({"success": True})
 
 async def api_vehicle_renew(request: web.Request):
@@ -2783,6 +3098,11 @@ async def api_user_dossier(request: web.Request):
     except Exception as e:
         return web.json_response({"success": False, "error": str(e)})
 
+async def api_user_dismiss_profile_prompt(request: web.Request):
+    user = require_user(request)
+    db.dismiss_user_profile_prompt(user["id"])
+    return web.json_response({"success": True})
+
 async def handle_logo(request: web.Request):
     logo_path = os.path.join(os.path.dirname(__file__), "static", "logo.png")
     if os.path.exists(logo_path):
@@ -2792,7 +3112,11 @@ async def handle_logo(request: web.Request):
 def create_web_app():
     app = web.Application()
 
-    # Assets & Pages
+    # Static Assets & Pages
+    static_dir = os.path.join(os.path.dirname(__file__), "static")
+    if os.path.exists(static_dir):
+        app.router.add_static("/static/", static_dir)
+
     app.router.add_get("/logo.png", handle_logo)
     app.router.add_get("/", handle_home)
     app.router.add_get("/grand", handle_grand)
@@ -2824,5 +3148,6 @@ def create_web_app():
     app.router.add_get("/api/libra/member/warnings", api_libra_member_warnings)
     app.router.add_post("/api/user/link_profiles", api_user_link_profiles)
     app.router.add_post("/api/user/dossier", api_user_dossier)
+    app.router.add_post("/api/user/dismiss_profile_prompt", api_user_dismiss_profile_prompt)
 
     return app
