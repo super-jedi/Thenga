@@ -132,16 +132,16 @@ async def handle_logout(request: web.Request):
 # ==========================================
 COMMON_CSS = """
 :root {
-    --bg-dark: #080c14;
-    --card-bg: #111724;
-    --card-border: #1d283c;
-    --accent: #f59e0b; /* Warm Coconut Amber */
-    --accent-light: #fbbf24;
-    --accent-hover: #d97706;
-    --accent-glow: rgba(245, 158, 11, 0.35);
-    --gold: #fbbf24;
-    --green: #10b981; /* Lush Kerala Emerald */
-    --green-glow: rgba(16, 185, 129, 0.25);
+    --bg-dark: #090a0f;
+    --card-bg: #11131a;
+    --card-border: #1e222d;
+    --accent: #ef4444; /* Thenga Hood Crimson Red */
+    --accent-hover: #dc2626;
+    --accent-glow: rgba(239, 68, 68, 0.4);
+    --gold: #f59e0b; /* Parotta Gold */
+    --tender-green: #22c55e; /* Fresh Coconut Green */
+    --green-glow: rgba(34, 197, 94, 0.3);
+    --cyan: #06b6d4; /* Coconut Straw Cyan */
     --red: #ef4444;
     --purple: #a855f7;
     --text-primary: #f8fafc;
@@ -157,33 +157,33 @@ body {
     flex-direction: column;
 }
 header {
-    background: #0d121d;
-    border-bottom: 1px solid var(--card-border);
-    padding: 16px 32px;
+    background: #0d0f17;
+    border-bottom: 2px solid rgba(239, 68, 68, 0.25);
+    padding: 14px 32px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    box-shadow: 0 4px 25px rgba(0,0,0,0.5);
 }
 .brand {
     font-size: 19px;
-    font-weight: 800;
-    color: var(--gold);
+    font-weight: 900;
+    color: #fff;
     display: flex;
     align-items: center;
     gap: 12px;
     text-decoration: none;
-    letter-spacing: -0.5px;
+    letter-spacing: 0.5px;
 }
 .brand-badge {
     font-size: 11px;
-    font-weight: 700;
-    color: #fbbf24;
-    background: rgba(245, 158, 11, 0.15);
-    border: 1px solid rgba(245, 158, 11, 0.4);
-    padding: 2px 8px;
+    font-weight: 800;
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    padding: 2px 10px;
     border-radius: 9999px;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.8px;
 }
 .user-pill {
     display: flex;
@@ -202,28 +202,32 @@ header {
     justify-content: center;
     gap: 8px;
     padding: 10px 20px;
-    font-weight: 700;
+    font-weight: 800;
     font-size: 14px;
     border-radius: 8px;
     cursor: pointer;
     border: none;
     text-decoration: none;
     transition: all 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 .btn-primary { 
-    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); 
-    color: #080c14; 
+    background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); 
+    color: #fff; 
+    box-shadow: 0 4px 14px rgba(239, 68, 68, 0.35);
 }
 .btn-primary:hover { 
-    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); 
-    box-shadow: 0 0 18px var(--accent-glow); 
+    background: linear-gradient(135deg, #f87171 0%, #dc2626 100%); 
+    box-shadow: 0 0 20px var(--accent-glow); 
+    transform: translateY(-1px);
 }
-.btn-green { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; }
+.btn-green { background: linear-gradient(135deg, #22c55e 0%, #15803d 100%); color: white; }
 .btn-green:hover { box-shadow: 0 0 15px var(--green-glow); }
-.btn-red { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; }
-.btn-purple { background: linear-gradient(135deg, #a855f7 0%, #9333ea 100%); color: white; }
-.btn-secondary { background: #1f293d; color: white; border: 1px solid #334155; }
-.btn-secondary:hover { background: #334155; }
+.btn-red { background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); color: white; }
+.btn-purple { background: linear-gradient(135deg, #a855f7 0%, #7e22ce 100%); color: white; }
+.btn-secondary { background: #1c202c; color: white; border: 1px solid #2b3244; }
+.btn-secondary:hover { background: #2b3244; }
 .tabs {
     display: flex;
     gap: 12px;
@@ -236,16 +240,17 @@ header {
     border: none;
     color: var(--text-secondary);
     font-size: 15px;
-    font-weight: 700;
-    padding: 8px 16px;
+    font-weight: 800;
+    padding: 8px 18px;
     border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s;
+    letter-spacing: 0.5px;
 }
 .tab-btn.active { 
-    background: rgba(245, 158, 11, 0.15); 
-    color: var(--gold); 
-    border: 1px solid rgba(245, 158, 11, 0.3);
+    background: rgba(239, 68, 68, 0.15); 
+    color: #f87171; 
+    border: 1px solid rgba(239, 68, 68, 0.45);
 }
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
@@ -254,14 +259,14 @@ header {
     border: 1px solid var(--card-border);
     border-radius: 14px;
     padding: 24px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+    box-shadow: 0 4px 25px rgba(0, 0, 0, 0.45);
 }
-.stat-val { font-size: 26px; font-weight: 800; color: #fff; margin-top: 4px; }
-.stat-label { font-size: 12px; color: var(--text-secondary); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; }
+.stat-val { font-size: 26px; font-weight: 900; color: #fff; margin-top: 4px; }
+.stat-label { font-size: 12px; color: var(--text-secondary); text-transform: uppercase; font-weight: 800; letter-spacing: 0.8px; }
 input, select {
     width: 100%;
-    background: #090d16;
-    border: 1px solid #243048;
+    background: #090a0f;
+    border: 1px solid #232838;
     color: #fff;
     padding: 12px;
     border-radius: 8px;
@@ -270,33 +275,33 @@ input, select {
     margin-bottom: 16px;
     transition: border-color 0.2s, box-shadow 0.2s;
 }
-input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 10px var(--accent-glow); }
+input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 12px var(--accent-glow); }
 table { width: 100%; border-collapse: collapse; margin-top: 12px; }
 th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--card-border); font-size: 14px; }
-th { color: var(--text-secondary); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
-.badge { display: inline-block; padding: 4px 10px; border-radius: 9999px; font-size: 12px; font-weight: 700; }
+th { color: var(--text-secondary); font-size: 12px; text-transform: uppercase; letter-spacing: 0.8px; }
+.badge { display: inline-block; padding: 4px 10px; border-radius: 9999px; font-size: 12px; font-weight: 800; letter-spacing: 0.5px; }
 .badge-red { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid #ef4444; }
-.badge-green { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid #10b981; }
+.badge-green { background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid #22c55e; }
 .badge-purple { background: rgba(168, 85, 247, 0.2); color: #c084fc; border: 1px solid #a855f7; }
 """
 
 def render_header(user: dict, subtitle: str = "") -> str:
     is_adm = is_admin_user(user)
     badge_html = (
-        '<span class="badge" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid #f59e0b; font-size: 11px; margin-left: 6px;">👑 FOUNDER / ADMIN</span>'
+        '<span class="badge badge-red" style="font-size: 11px; margin-left: 6px;">👑 FOUNDER / ADMIN</span>'
         if is_adm else
-        '<span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid #10b981; font-size: 11px; margin-left: 6px;">MEMBER</span>'
+        '<span class="badge badge-green" style="font-size: 11px; margin-left: 6px;">MEMBER</span>'
     )
     sub_tag = (
-        f'<span style="font-size:14px; color:#94a3b8; font-weight:500;">/ {subtitle}</span>'
+        f'<span style="font-size:14px; color:#94a3b8; font-weight:600;">/ {subtitle}</span>'
         if subtitle else
         '<span class="brand-badge">MALAYALI CLUB</span>'
     )
     return f"""
     <header>
         <a href="/" class="brand">
-            <div style="width:36px; height:36px; border-radius:50%; background:radial-gradient(circle, rgba(245,158,11,0.25), rgba(18,24,36,0.9)); border:1.5px solid rgba(245,158,11,0.5); display:flex; align-items:center; justify-content:center; font-size:20px; box-shadow: 0 0 12px rgba(245,158,11,0.2);">🥥</div>
-            <span>THENGA NETWORK</span> {sub_tag}
+            <img src="/logo.png" alt="Thenga Logo" style="height:36px; width:auto; object-fit:contain; filter:drop-shadow(0 2px 8px rgba(239,68,68,0.5));">
+            <span>THENGA <span style="color:var(--accent);">NETWORK</span></span> {sub_tag}
         </a>
         <div class="user-pill">
             <img class="user-avatar" src="{user['avatar_url']}">
@@ -321,21 +326,23 @@ async def handle_home(request: web.Request):
                 <title>Thenga Network Management Dashboard</title>
                 <style>{COMMON_CSS}</style>
             </head>
-            <body style="justify-content: center; align-items: center; text-align: center; padding: 20px;">
-                <div class="card" style="max-width: 520px; width: 100%; padding: 48px 36px; border: 1px solid rgba(245, 158, 11, 0.45); box-shadow: 0 12px 50px rgba(0, 0, 0, 0.7), 0 0 40px rgba(245, 158, 11, 0.15); border-radius: 20px;">
-                    <div style="width: 90px; height: 90px; margin: 0 auto 18px; border-radius: 50%; background: radial-gradient(circle, rgba(245, 158, 11, 0.22) 0%, rgba(18, 24, 38, 0.95) 70%); display: flex; align-items: center; justify-content: center; border: 2px solid rgba(245, 158, 11, 0.55); box-shadow: 0 0 30px rgba(245, 158, 11, 0.35);">
-                        <span style="font-size: 50px; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.6));">🥥</span>
+            <body style="justify-content: center; align-items: center; text-align: center; padding: 20px; background: radial-gradient(circle at 50% 20%, rgba(239, 68, 68, 0.12) 0%, rgba(9, 10, 15, 1) 70%);">
+                <div class="card" style="max-width: 500px; width: 100%; padding: 46px 36px; border: 1.5px solid rgba(239, 68, 68, 0.45); box-shadow: 0 16px 60px rgba(0, 0, 0, 0.8), 0 0 45px rgba(239, 68, 68, 0.18); border-radius: 22px;">
+                    <div style="margin-bottom: 20px;">
+                        <img src="/logo.png" alt="Thenga Network" style="max-width: 230px; width: 100%; height: auto; filter: drop-shadow(0 8px 30px rgba(239, 68, 68, 0.5));">
                     </div>
-                    <h1 style="color: #fbbf24; font-size: 25px; font-weight: 800; margin-bottom: 8px; letter-spacing: -0.5px;">Thenga Network Management Dashboard</h1>
-                    <p style="color: #94a3b8; margin-bottom: 30px; font-size: 15px; line-height: 1.5;">
-                        Integrated command center for <b style="color: #f8fafc;">Thenga Network Malayali Club</b>
+                    <h1 style="color: #fff; font-size: 24px; font-weight: 900; margin-bottom: 8px; letter-spacing: -0.5px; text-transform: uppercase;">
+                        Thenga Network <span style="color: var(--accent);">Dashboard</span>
+                    </h1>
+                    <p style="color: var(--text-secondary); margin-bottom: 28px; font-size: 14px; line-height: 1.5;">
+                        Integrated command center for <b style="color: #f87171;">Thenga Network Malayali Club</b>
                     </p>
-                    <a href="/auth/login" class="btn" style="width: 100%; padding: 15px; font-size: 16px; font-weight: 700; background: #5865F2; color: #fff; border-radius: 10px; box-shadow: 0 4px 18px rgba(88, 101, 242, 0.4); text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                    <a href="/auth/login" class="btn" style="width: 100%; padding: 15px; font-size: 15px; font-weight: 800; background: #5865F2; color: #fff; border-radius: 10px; box-shadow: 0 4px 20px rgba(88, 101, 242, 0.45); text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 10px; transition: transform 0.15s, box-shadow 0.15s;">
                         <svg style="width: 22px; height: 22px; fill: currentColor;" viewBox="0 0 24 24"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515a.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0a12.64 12.64 0 0 0-.617-1.25a.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057a19.9 19.9 0 0 0 5.993 3.03a.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892a.077.077 0 0 1-.008-.128a10.2 10.2 0 0 0 .372-.292a.074.074 0 0 1 .077-.01c3.929 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127a12.299 12.299 0 0 1-1.873.894a.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028a19.839 19.839 0 0 0 6.002-3.03a.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.956-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.955-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.946 2.418-2.157 2.418z"/></svg>
                         Login with Discord
                     </a>
                     <div style="margin-top: 22px; font-size: 12px; color: #64748b; display: flex; align-items: center; justify-content: center; gap: 6px;">
-                        <span>🔒</span> Official Discord OAuth2 • Verified Members Only
+                        <span>🔒</span> Verified Thenga Network Members Only
                     </div>
                 </div>
             </body>
@@ -357,8 +364,12 @@ async def handle_home(request: web.Request):
 
             <main style="max-width: 960px; margin: 40px auto; width: 100%; padding: 0 20px;">
                 <div style="text-align: center; margin-bottom: 36px;">
-                    <h1 style="font-size: 32px; font-weight: 800; color: #fff;">Select Family Operations</h1>
-                    <p style="color: var(--text-secondary); margin-top: 6px;">Choose your active GTA RP server dashboard</p>
+                    <div style="margin-bottom: 12px;">
+                        <img src="/logo.png" alt="Thenga Logo" style="width: 84px; height: auto; filter: drop-shadow(0 4px 16px rgba(239, 68, 68, 0.45));">
+                    </div>
+                    <div style="font-size: 12px; font-weight: 800; color: var(--accent); letter-spacing: 1.5px; text-transform: uppercase;">Thenga Network Malayali Club</div>
+                    <h1 style="font-size: 32px; font-weight: 900; color: #fff; margin-top: 4px; letter-spacing: -0.5px;">FAMILY OPERATIONS COMMAND</h1>
+                    <p style="color: var(--text-secondary); margin-top: 6px; font-size: 15px;">Select active GTA RP server operations dashboard</p>
                 </div>
 
                 <div class="grid-2">
@@ -510,7 +521,7 @@ async def handle_grand(request: web.Request):
                     <div class="grid-3" style="margin-bottom: 24px;">
                         <div class="card">
                             <div class="stat-label">Current Family Fund</div>
-                            <div class="stat-val" style="color:#38bdf8;">{format_money(bal['balance'])}</div>
+                            <div class="stat-val" style="color:#22c55e;">{format_money(bal['balance'])}</div>
                         </div>
                         <div class="card">
                             <div class="stat-label">Total Deposited</div>
@@ -1098,10 +1109,17 @@ async def api_event_remove(request: web.Request):
     success = db.remove_event(data.get("event_id"))
     return web.json_response({"success": success})
 
+async def handle_logo(request: web.Request):
+    logo_path = os.path.join(os.path.dirname(__file__), "static", "logo.png")
+    if os.path.exists(logo_path):
+        return web.FileResponse(logo_path)
+    return web.Response(status=404)
+
 def create_web_app():
     app = web.Application()
 
-    # Pages
+    # Assets & Pages
+    app.router.add_get("/logo.png", handle_logo)
     app.router.add_get("/", handle_home)
     app.router.add_get("/grand", handle_grand)
     app.router.add_get("/libra", handle_libra)
