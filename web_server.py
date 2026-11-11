@@ -15,7 +15,6 @@ from utils import format_money, parse_amount, is_admin_user
 load_dotenv()
 
 CLIENT_ID = os.getenv("DISCORD_CLIENT_ID", "1567865230829035530")
-ENABLE_DEV_LOGIN = os.getenv("ENABLE_DEV_LOGIN", "true").lower() == "true" # Enabled for persistent dev & admin access
 SECRET_KEY = db.get_or_create_session_secret()
 
 def get_client_secret() -> str:
@@ -92,26 +91,31 @@ async def handle_login(request: web.Request):
             f"&redirect_uri={redirect_uri}&response_type=code&scope=identify"
         )
         return web.HTTPFound(discord_url)
-    elif ENABLE_DEV_LOGIN:
-        return web.HTTPFound(f"/auth/quick_login?user=superjedi.0257")
     else:
-        return web.Response(
-            text="Discord OAuth is not configured. Please add DISCORD_CLIENT_SECRET in .env to enable login.",
-            status=503,
-            content_type="text/plain"
-        )
-
-async def handle_quick_login(request: web.Request):
-    username = request.query.get("user", "superjedi.0257")
-    user_info = {
-        "id": "1567865230829035530",
-        "username": username,
-        "avatar_url": "/static/logo.png"
-    }
-    token = create_session_token(user_info)
-    response = web.HTTPFound("/")
-    response.set_cookie("thenga_user", token, max_age=86400 * 90, httponly=True, samesite="Lax", path="/")
-    return response
+        html = """<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>OAuth Configuration Required</title>
+    <style>
+        body { background: #07080c; color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .box { background: #0e121d; border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 14px; padding: 32px; max-width: 480px; text-align: center; }
+        h2 { color: #f87171; margin-top: 0; font-size: 20px; }
+        p { color: #94a3b8; font-size: 14px; line-height: 1.6; }
+        code { background: #181d2d; padding: 4px 8px; border-radius: 6px; color: #38bdf8; font-size: 13px; font-family: monospace; }
+        a { color: #818cf8; text-decoration: none; display: inline-block; margin-top: 16px; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h2>🔒 Discord OAuth Setup Required</h2>
+        <p>Discord OAuth is not yet configured for this host.</p>
+        <p>Please add <code>DISCORD_CLIENT_SECRET=your_secret_here</code> to your <code>.env</code> file on the server and restart the bot.</p>
+        <a href="/">← Return to Homepage</a>
+    </div>
+</body>
+</html>"""
+        return web.Response(text=html, status=503, content_type="text/html")
 
 async def handle_callback(request: web.Request):
     code = request.query.get("code")
@@ -159,22 +163,26 @@ async def handle_logout(request: web.Request):
     cookie = request.cookies.get("thenga_user")
     if cookie:
         db.delete_user_session(cookie)
-    response = web.HTTPFound("/")
+    html = """<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Signing out...</title>
+    <script>
+        try {
+            localStorage.clear();
+            sessionStorage.clear();
+        } catch(e) {}
+        window.location.replace('/');
+    </script>
+</head>
+<body style="background:#07080c; color:#94a3b8; font-family:sans-serif; display:flex; align-items:center; justify-content:center; height:100vh; margin:0;">
+    <p>Signing out...</p>
+</body>
+</html>"""
+    response = web.Response(text=html, content_type="text/html")
     response.del_cookie("thenga_user", path="/")
     return response
-
-async def handle_restore_session(request: web.Request):
-    try:
-        data = await request.json()
-        token = data.get("token")
-        user = parse_session_token(token)
-        if user:
-            response = web.json_response({"success": True, "user": user})
-            response.set_cookie("thenga_user", token, max_age=86400 * 90, httponly=True, samesite="Lax", path="/")
-            return response
-    except Exception:
-        pass
-    return web.json_response({"success": False, "error": "Invalid session"}, status=401)
 
 # ==========================================
 # HTML TEMPLATES & PAGES
@@ -1214,8 +1222,8 @@ def render_app_shell(
     libra_rank = profile.get("libra_rank") or "Associate (Rank 1)"
     primary_persona = profile.get("primary_persona") or "grandrp"
     libra_m = db.get_libra_member_by_discord(user["id"])
-    libra_name = libra_m["name"] if libra_m else "Superjedi Tnga"
-    libra_id = libra_m["id"] if libra_m else 5392
+    libra_name = libra_m["name"] if libra_m else (profile.get("libra_member_name") or user["username"])
+    libra_id = libra_m["id"] if libra_m else (profile.get("libra_member_id") or "Unlinked")
 
     # First time member dropdown options for personas modal
     member_select_options = '<option value="">-- Choose your in-game character --</option>'
@@ -1442,7 +1450,7 @@ def render_app_shell(
 
             <div style="border-top:1px solid var(--border-subtle); padding-top:14px; margin-top:6px;">
                 <label style="font-size:11px; font-weight:800; color:var(--accent-blue); text-transform:uppercase;">Grand RP (EN2 Character):</label>
-                <input id="modal-grand-name" type="text" value="{grand_name}" placeholder="Character Name (e.g. MGC Superjedi)">
+                <input id="modal-grand-name" type="text" value="{grand_name}" placeholder="Character Name (e.g. John Doe)">
 
                 <label style="font-size:11px; font-weight:800; color:var(--accent-purple); text-transform:uppercase;">Libra RP (Fedrix Clan Character):</label>
                 <select id="modal-libra-id">
@@ -1644,14 +1652,8 @@ def render_app_shell(
 
     {extra_modals}
 
-    <!-- ==================== CLIENT SCRIPTS & SESSION PERSISTENCE ==================== -->
+    <!-- ==================== CLIENT SCRIPTS ==================== -->
     <script>
-        // Dual-Layer Session Token Persistence in LocalStorage
-        try {{
-            localStorage.setItem('thenga_session_token', '{create_session_token(user)}');
-            localStorage.setItem('thenga_username', '{user["username"]}');
-        }} catch(e) {{}}
-
         // Responsibilities Matrix for Edit Rank Dialog (figma_1_11)
         const RANK_RESPONSIBILITIES = {{
             1: [
@@ -2016,37 +2018,10 @@ async def handle_home(request: web.Request):
             Login with Discord
         </a>
         
-        <!-- Quick dev/admin access bypass -->
-        <div style="margin-top: 14px;">
-            <a href="/auth/quick_login?user=superjedi.0257" class="btn btn-secondary btn-sm" style="width: 100%; border-color: rgba(34, 197, 94, 0.4); color: #4ade80;">
-                ⚡ Quick Login as Admin (superjedi.0257)
-            </a>
-        </div>
-
         <div style="margin-top: 22px; font-size: 11px; color: #64748b; display: flex; align-items: center; justify-content: center; gap: 6px;">
             <span>🔒</span> Verified Thenga Network Members Only • Sessions Persist 90 Days
         </div>
     </div>
-
-    <!-- Client-Side Instant Auto-Restore Script -->
-    <script>
-        (async function() {{
-            var token = localStorage.getItem('thenga_session_token');
-            if (token) {{
-                try {{
-                    var res = await fetch('/auth/restore_session', {{
-                        method: 'POST',
-                        headers: {{'Content-Type': 'application/json'}},
-                        body: JSON.stringify({{ token: token }})
-                    }});
-                    var d = await res.json();
-                    if (d.success) {{
-                        location.href = '/';
-                    }}
-                }} catch(e) {{}}
-            }}
-        }})();
-    </script>
 </body>
 </html>
 """
@@ -2061,8 +2036,8 @@ async def handle_home(request: web.Request):
     primary_persona = profile.get("primary_persona") or "grandrp"
     grand_name = profile.get("grand_member_name") or user["username"]
     libra_m = db.get_libra_member_by_discord(user["id"])
-    libra_name = libra_m["name"] if libra_m else "Superjedi Tnga"
-    libra_id = libra_m["id"] if libra_m else 5392
+    libra_name = libra_m["name"] if libra_m else (profile.get("libra_member_name") or user["username"])
+    libra_id = libra_m["id"] if libra_m else (profile.get("libra_member_id") or "Unlinked")
 
     # Fetch recent activities from SQLite
     activities = db.get_recent_activities(limit=10)
@@ -4321,8 +4296,6 @@ def create_web_app():
     app.router.add_get("/auth/login", handle_login)
     app.router.add_get("/auth/callback", handle_callback)
     app.router.add_get("/auth/logout", handle_logout)
-    app.router.add_get("/auth/quick_login", handle_quick_login)
-    app.router.add_post("/auth/restore_session", handle_restore_session)
 
     # REST APIs
     app.router.add_get("/api/activities", api_activities)

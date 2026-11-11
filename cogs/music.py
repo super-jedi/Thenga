@@ -23,7 +23,8 @@ YTDL_OPTIONS = {
     'quiet': True,
     'no_warnings': True,
     'default_search': 'ytsearch',
-    'source_address': '0.0.0.0',
+    'cachedir': False,
+    'skip_download': True,
 }
 
 FFMPEG_OPTIONS = {
@@ -38,11 +39,18 @@ class Track:
         self.data = data
         self.requester = requester
         self.title = data.get('title', 'Unknown Title')
-        self.webpage_url = data.get('webpage_url', '')
-        self.stream_url = data.get('url', '')
+        self.webpage_url = data.get('webpage_url') or data.get('original_url') or data.get('url', '')
+        stream_url = data.get('url', '')
+        if not stream_url and 'formats' in data:
+            audio_formats = [f for f in data['formats'] if f.get('acodec') != 'none' and (f.get('vcodec') == 'none' or not f.get('vcodec'))]
+            if audio_formats:
+                stream_url = audio_formats[-1].get('url', '')
+            elif data['formats']:
+                stream_url = data['formats'][-1].get('url', '')
+        self.stream_url = stream_url
         self.thumbnail = data.get('thumbnail', '')
         self.duration = data.get('duration', 0)
-        self.uploader = data.get('uploader', 'Unknown Artist')
+        self.uploader = data.get('uploader') or data.get('channel', 'Unknown Artist')
 
     @property
     def formatted_duration(self) -> str:
@@ -100,7 +108,15 @@ class GuildPlayer:
                     None,
                     lambda: ytdl.extract_info(track.webpage_url, download=False)
                 )
-                stream_url = data.get('url', track.stream_url)
+                stream_url = data.get('url')
+                if not stream_url and 'formats' in data:
+                    audio_formats = [f for f in data['formats'] if f.get('acodec') != 'none' and (f.get('vcodec') == 'none' or not f.get('vcodec'))]
+                    if audio_formats:
+                        stream_url = audio_formats[-1].get('url')
+                    elif data['formats']:
+                        stream_url = data['formats'][-1].get('url')
+                if not stream_url:
+                    stream_url = track.stream_url
 
                 source = discord.FFmpegPCMAudio(stream_url, **FFMPEG_OPTIONS)
                 transformed_source = discord.PCMVolumeTransformer(source, volume=self.volume)
