@@ -59,7 +59,8 @@ async def send_discord_notification(channel_id: int, embed_dict: dict, content: 
     url = f"https://discord.com/api/v10/channels/{channel_id}/messages"
     headers = {
         "Authorization": f"Bot {token}",
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "User-Agent": "DiscordBot (https://github.com/super-jedi/Thenga, 1.0)"
     }
     payload = {"embeds": [embed_dict]}
     if content:
